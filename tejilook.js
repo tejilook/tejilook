@@ -158,7 +158,7 @@ function imprimirReporteEmb(noOrden){
         +'<td colspan="3" style="text-align:right;padding:10px 12px;font-weight:700;font-size:13px">TOTAL GENERAL</td>'
         +'<td style="text-align:center;font-size:17px;font-weight:700;color:#1d4ed8;padding:10px 12px">'+grandTotal+' suét.</td>'
       +'</tr></tbody></table>'
-      +'<div class="footer">TejiLook ERP — Generado el '+hoy+'</div>'
+      +'<div class="footer">TejiLook Sistema De Control — Generado el '+hoy+'</div>'
       +'<button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>';
     var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Embolsado '+noOrden+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
     var win=window.open('','_blank','width=860,height=720');
