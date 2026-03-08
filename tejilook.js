@@ -207,7 +207,7 @@ function renderSalidas(){ document.getElementById('main').innerHTML='<div class=
        // Preview sidebar
        +'<div style="background:var(--primary);border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:16px">'
          +'<div id="cfgPreviewIcon" style="width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;font-family:Space Grotesk,sans-serif;overflow:hidden;flex-shrink:0">'
-           +(cfg.sistLogoUrl ? '<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:cover">' : cfg.sistLogoIcon)
+           +(cfg.sistLogoUrl ? '<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">' : cfg.sistLogoIcon)
          +'</div>'
          +'<div>'
            +'<div id="cfgPreviewName" style="color:#fff;font-weight:700;font-family:Space Grotesk,sans-serif;font-size:14px">'+cfg.sistNombre+'</div>'
@@ -258,7 +258,7 @@ function guardarConfig(){
       if(brandName) brandName.textContent=nombre;
       if(brandSub)  brandSub.textContent=sub;
       if(logoUrl&&brandIcon){
-        brandIcon.innerHTML='<img src="'+logoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';
+        brandIcon.style.background='transparent';brandIcon.innerHTML='<img src="'+logoUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:8px">';
       }
       btn.innerHTML='<i class="fas fa-save"></i> Guardar';
       btn.disabled=false;
@@ -277,5 +277,5 @@ function guardarConfig(){
 }
 
 window.addEventListener('DOMContentLoaded',()=>{ if(isDark) document.getElementById('darkIcon').className='fas fa-sun'; call('getUsuarioActual').then(user=>{ currentUser=user; document.getElementById('userName').textContent=user.nombre; document.getElementById('userRole').textContent=user.rol; document.getElementById('userAvatar').textContent=user.nombre.charAt(0).toUpperCase(); }).catch(()=>{}); 
-call('getConfig').then(function(cfg){ var bn=document.querySelector('.brand-text .name'); var bs=document.querySelector('.brand-text .sub'); var bi=document.querySelector('.brand-icon'); if(bn&&cfg.sistNombre)bn.textContent=cfg.sistNombre; if(bs&&cfg.sistSub)bs.textContent=cfg.sistSub; if(bi&&cfg.sistLogoUrl)bi.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';}).catch(function(){}); const initView=window.location.hash?window.location.hash.replace('#',''):'dashboard'; navigate(initView||'dashboard'); })
+call('getConfig').then(function(cfg){ var bn=document.querySelector('.brand-text .name'); var bs=document.querySelector('.brand-text .sub'); var bi=document.querySelector('.brand-icon'); if(bn&&cfg.sistNombre)bn.textContent=cfg.sistNombre; if(bs&&cfg.sistSub)bs.textContent=cfg.sistSub; if(bi&&cfg.sistLogoUrl){bi.style.background='transparent';bi.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">';}}).catch(function(){}); const initView=window.location.hash?window.location.hash.replace('#',''):'dashboard'; navigate(initView||'dashboard'); })
 ;
