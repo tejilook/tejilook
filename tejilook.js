@@ -134,7 +134,7 @@ function imprimirReporteEmb(noOrden){
       +'.btn-print{background:#1d4ed8;color:#fff;border:none;padding:10px 36px;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;margin-top:20px;display:block;margin:20px auto 0}';
     var body=''
       +'<div class="top-bar">'
-        +'<div class="brand">'+logoSvg+'<div><div class="brand-name">TejiLook</div><div class="brand-sub">Control de Producción</div></div></div>'
+        +'<div class="brand">'+logoSvg+'<div><div class="brand-name"><strong>Teji</strong>Look</div><div class="brand-sub">Sistema de Control</div></div></div>'
         +'<div class="doc-title"><span>Reporte de Embolsado</span><strong>No. Orden: '+noOrden+'</strong></div>'
       +'</div>'
       +'<div class="header">'
@@ -158,7 +158,7 @@ function imprimirReporteEmb(noOrden){
         +'<td colspan="3" style="text-align:right;padding:10px 12px;font-weight:700;font-size:13px">TOTAL GENERAL</td>'
         +'<td style="text-align:center;font-size:17px;font-weight:700;color:#1d4ed8;padding:10px 12px">'+grandTotal+' suét.</td>'
       +'</tr></tbody></table>'
-      +'<div class="footer">TejiLook Sistema De Control — Generado el '+hoy+'</div>'
+      +'<div class="footer"><strong>TejiLook</strong> Sistema de Control — Generado el '+hoy+'</div>'
       +'<button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>';
     var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Embolsado '+noOrden+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
     var win=window.open('','_blank','width=860,height=720');
