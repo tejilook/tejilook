@@ -446,92 +446,112 @@ function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML
   openModal('modalFormato');
   call('getFormatoSalida', idSalida).then(function(f){
     if(!f){document.getElementById('formatoContent').innerHTML='<p style="color:red">Error al cargar el formato.</p>';return;}
-    var salida = f.salida;
-    var lineas = f.detalle || [];   // [{talla, bultos, pzBolsa, cuello, total}]
-    var totalPz = lineas.reduce(function(s,l){return s+(l.total||0);},0);
 
-    // Build column list — one column per line (exactly like the PDF)
+    var salida  = f.salida;
+    var lineas  = f.detalle || [];   // [{talla, bultos, pzBolsa, total, cuello}]
+
+    // Pad hasta 10 columnas para que la tabla siempre tenga espacio
     var cols = lineas.slice();
-    while(cols.length < 10) cols.push({talla:'',bultos:'',pzBolsa:'',cuello:'',total:''});
+    while(cols.length < 10) cols.push({talla:'',bultos:'',pzBolsa:'',total:'',cuello:''});
 
-    var cfg = window._sysConfig || {};
+    var totalPz = lineas.reduce(function(s,l){return s+(Number(l.total)||0);},0);
+
+    var cfg     = window._sysConfig || {};
     var logoHtml = cfg.sistLogoUrl
       ? '<img src="'+cfg.sistLogoUrl+'" style="height:54px;object-fit:contain">'
-      : '<div style="font-family:\'Space Grotesk\',sans-serif;font-size:26px;font-weight:900;line-height:1"><span style="font-weight:900">TEJI</span><span style="font-weight:400">-LOOK</span></div>';
+      : '<div style="font-family:Arial,sans-serif;font-size:26px;font-weight:900;line-height:1">TEJI<span style="font-weight:400">-LOOK</span></div>';
 
-    var cell = 'border:1.5px solid #000;padding:6px 4px;text-align:center;';
-    var cellL = 'border:1.5px solid #000;padding:6px 8px;font-weight:700;background:#e5e7eb;white-space:nowrap;';
-    var hdrCell = 'border:1.5px solid #000;padding:6px 4px;background:#e5e7eb;text-align:center;font-weight:700;min-width:44px;';
+    var B  = 'border:1.5px solid #000;';
+    var BG = 'border:1.5px solid #000;background:#e5e7eb;print-color-adjust:exact;-webkit-print-color-adjust:exact;';
+    var cellBase   = B+'padding:6px 4px;text-align:center;font-size:11px;';
+    var cellLabel  = BG+'padding:6px 8px;font-weight:700;font-size:11px;white-space:nowrap;min-width:90px;';
+    var cellHeader = BG+'padding:6px 4px;text-align:center;font-weight:700;font-size:11px;min-width:44px;';
+
+    function v(val){ return (val!==''&&val!==undefined&&val!==null)?val:''; }
 
     document.getElementById('formatoContent').innerHTML =
-      '<div id="printArea" style="font-family:\'DM Sans\',Arial,sans-serif;background:#fff;color:#000;padding:20px;max-width:860px;margin:0 auto">'
+      '<div id="printArea" style="font-family:Arial,sans-serif;background:#fff;color:#000;padding:20px;max-width:900px;margin:0 auto">'
 
-        // ── HEADER ──
-        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #000;padding-bottom:12px;margin-bottom:14px">'
+        // ── ENCABEZADO ──
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:14px">'
           +'<div>'+logoHtml+'</div>'
-          +'<div style="text-align:right;font-family:\'Space Grotesk\',sans-serif">'
+          +'<div style="text-align:right">'
             +'<div style="font-size:20px;font-weight:900;text-transform:uppercase;line-height:1.2">CONTROL SALIDAS<br>ÁREA DE TEJIDO</div>'
           +'</div>'
         +'</div>'
 
-        // ── META 2 COLUMNAS ──
+        // ── META ──
         +'<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">'
           +'<tr>'
-            +'<td style="padding:3px 0;width:50%"><strong>FECHA:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px">'+fmt(salida.fecha)+'</span></td>'
-            +'<td style="padding:3px 0"><strong>CLIENTE:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px">'+salida.cliente+'</span></td>'
+            +'<td style="padding:3px 0;width:50%"><strong>FECHA:</strong>&nbsp;'+fmt(salida.fecha)+'</td>'
+            +'<td style="padding:3px 0"><strong>CLIENTE:</strong>&nbsp;'+v(salida.cliente)+'</td>'
           +'</tr>'
           +'<tr>'
-            +'<td style="padding:3px 0"><strong>MODELO:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px">'+salida.modelo+'</span></td>'
-            +'<td style="padding:3px 0"><strong>MAQUILA:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px">'+salida.maquila+'</span></td>'
+            +'<td style="padding:3px 0"><strong>MODELO:</strong>&nbsp;'+v(salida.modelo)+'</td>'
+            +'<td style="padding:3px 0"><strong>MAQUILA:</strong>&nbsp;'+v(salida.maquila)+'</td>'
           +'</tr>'
           +'<tr>'
-            +'<td style="padding:3px 0"><strong>NO. ORDEN:</strong> <span style="border-bottom:2px solid #1e40af;padding-bottom:1px;margin-left:4px;font-weight:700;color:#1e40af">'+salida.noOrden+'</span></td>'
-            +'<td style="padding:3px 0"><strong>CANCELACIÓN:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px">'+(fmt(salida.caducidad)||'—')+'</span></td>'
+            +'<td style="padding:3px 0"><strong>NO. ORDEN:</strong>&nbsp;<span style="font-weight:700;color:#1e40af">'+v(salida.noOrden)+'</span></td>'
+            +'<td style="padding:3px 0"><strong>FECHA DE ENTREGA:</strong>&nbsp;'+fmt(salida.caducidad)+'</td>'
           +'</tr>'
           +'<tr>'
-            +'<td colspan="2" style="padding:3px 0"><strong>TOTAL DE PZ:</strong> <span style="border-bottom:1.5px solid #000;padding-bottom:1px;margin-left:4px;font-weight:700;font-size:15px">'+totalPz+'</span></td>'
+            +'<td colspan="2" style="padding:4px 0"><strong>TOTAL DE PZ:</strong>&nbsp;<span style="font-weight:700;font-size:15px">'+totalPz+'</span></td>'
           +'</tr>'
         +'</table>'
 
         // ── TABLA BULTOS ──
-        +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px">'
+        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'
           +'<thead><tr>'
-            +'<th style="'+cellL+'min-width:90px;font-size:11px">TALLA</th>'
-            +cols.map(function(c){return '<th style="'+hdrCell+'">'+c.talla+'</th>';}).join('')
+            +'<th style="'+cellLabel+'">TALLA</th>'
+            +cols.map(function(c){return '<th style="'+cellHeader+'">'+v(c.talla)+'</th>';}).join('')
           +'</tr></thead>'
           +'<tbody>'
-            +'<tr><td style="'+cellL+'">BULTOS</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.bultos!==''&&c.bultos!==undefined?c.bultos:'')+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellL+'">PZ POR<br>BULTO</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.pzBolsa!==''&&c.pzBolsa!==undefined?c.pzBolsa:'')+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellL+'">TOTAL<br>DE PZ</td>'+cols.map(function(c){return '<td style="'+cell+';font-weight:700">'+(c.total!==''&&c.total!==undefined?c.total:'')+'</td>';}).join('')+'</tr>'
+            +'<tr><td style="'+cellLabel+'">BULTOS</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.bultos)+'</td>';}).join('')+'</tr>'
+            +'<tr><td style="'+cellLabel+'">PZ POR<br>BULTO</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.pzBolsa)+'</td>';}).join('')+'</tr>'
+            +'<tr><td style="'+cellLabel+'">TOTAL<br>DE PZ</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+';font-weight:700">'+v(c.total)+'</td>';}).join('')+'</tr>'
           +'</tbody>'
         +'</table>'
 
-        // ── TABLA PIEZAS ──
-        +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px">'
+        // ── TABLA CANTIDAD DE PIEZAS ──
+        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'
           +'<thead>'
-            +'<tr><th colspan="'+(cols.length+1)+'" style="border:1.5px solid #000;padding:7px;background:#e5e7eb;text-align:center;font-size:13px;letter-spacing:1px">CANTIDAD DE PIEZAS</th></tr>'
-            +'<tr><th style="'+hdrCell+'min-width:90px"></th>'+cols.map(function(c){return '<th style="'+hdrCell+'">'+c.talla+'</th>';}).join('')+'</tr>'
+            +'<tr><th colspan="'+(cols.length+1)+'" style="'+BG+'padding:8px;text-align:center;font-size:13px;letter-spacing:1px">CANTIDAD DE PIEZAS</th></tr>'
+            +'<tr><th style="'+cellLabel+'"></th>'
+              +cols.map(function(c){return '<th style="'+cellHeader+'">'+v(c.talla)+'</th>';}).join('')
+            +'</tr>'
           +'</thead>'
           +'<tbody>'
-            // FRENTES = total de esa columna
-            +'<tr><td style="'+cellL+'">FRENTES</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.total!==''&&c.total!==undefined?c.total:'')+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellL+'">ESPALDAS</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.total!==''&&c.total!==undefined?c.total:'')+'</td>';}).join('')+'</tr>'
-            // MANGAS = total × 2
-            +'<tr><td style="'+cellL+'">MANGAS</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.total!==''&&c.total!==undefined&&c.total!==0?c.total*2:'')+'</td>';}).join('')+'</tr>'
-            // CUELLOS por columna (de cada línea)
-            +'<tr><td style="'+cellL+'">CUELLOS</td>'+cols.map(function(c){return '<td style="'+cell+'">'+(c.cuello||'')+'</td>';}).join('')+'</tr>'
-            // Rows de valor único
-            +'<tr><td style="'+cellL+'">CINTA (MTS.)</td><td colspan="'+cols.length+'" style="border:1.5px solid #000;padding:6px 10px;font-weight:700">'+( salida.cinta||salida.tapaCostura||0)+'</td></tr>'
-            +'<tr><td style="'+cellL+'">MUESTRA</td><td colspan="'+cols.length+'" style="border:1.5px solid #000;padding:6px 10px;font-weight:700">'+(salida.muestra==='SI'?'SI':'NO')+'</td></tr>'
-            +'<tr><td style="'+cellL+'">MOLDES</td><td colspan="'+cols.length+'" style="border:1.5px solid #000;padding:6px 10px;font-weight:700">'+(salida.moldes==='SI'?'SI':'NO')+'</td></tr>'
-            +'<tr><td style="'+cellL+'">HILO (KG.)</td><td colspan="'+cols.length+'" style="border:1.5px solid #000;padding:6px 10px;font-weight:700">'+(salida.hilo||0)+'</td></tr>'
+            +'<tr><td style="'+cellLabel+'">FRENTES</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.total)+'</td>';}).join('')+'</tr>'
+            +'<tr><td style="'+cellLabel+'">ESPALDAS</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.total)+'</td>';}).join('')+'</tr>'
+            +'<tr><td style="'+cellLabel+'">MANGAS</td>'
+              +cols.map(function(c){
+                var m = (c.total!==''&&c.total!==undefined&&Number(c.total)>0) ? Number(c.total)*2 : '';
+                return '<td style="'+cellBase+'">'+m+'</td>';
+              }).join('')+'</tr>'
+            // CUELLOS — solo primer aparición de cada talla tiene valor
+            +'<tr><td style="'+cellLabel+'">CUELLOS</td>'
+              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.cuello)+'</td>';}).join('')+'</tr>'
+            // Filas de valor único
+            +'<tr><td style="'+cellLabel+'">TAPA COSTURA (M)</td>'
+              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.tapaCostura||0)+'</td></tr>'
+            +'<tr><td style="'+cellLabel+'">MUESTRA</td>'
+              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.muestra==='SI'?'SI':'NO')+'</td></tr>'
+            +'<tr><td style="'+cellLabel+'">MOLDES</td>'
+              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.moldes==='SI'?'SI':'NO')+'</td></tr>'
+            +'<tr><td style="'+cellLabel+'">HILO (KG.)</td>'
+              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.hilo||0)+'</td></tr>'
           +'</tbody>'
         +'</table>'
 
         // ── FIRMAS ──
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:32px">'
-          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:600">ENTREGA:</div></div>'
-          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:600">RECIBE:</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:36px">'
+          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:700">ENTREGA:</div></div>'
+          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:700">RECIBE:</div></div>'
         +'</div>'
       +'</div>';
   });
@@ -540,15 +560,17 @@ function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML
 function printFormato(){
   var content = document.getElementById('printArea');
   if(!content){toast('No hay formato para imprimir','danger');return;}
-  var w = window.open('','','width=940,height=800');
+  var w = window.open('','','width=1000,height=800');
   var html = '<!DOCTYPE html><html><head><title>Control Salidas - Tejilook</title>'
-    +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:15px;background:#fff;color:#000}'
-    +'@media print{body{padding:5px}@page{margin:8mm;size:landscape}}</style>'
+    +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:12px;background:#fff;color:#000}'
+    +'table{border-collapse:collapse}td,th{border:1.5px solid #000}'
+    +'@media print{body{padding:4px}@page{margin:6mm;size:landscape}}</style>'
     +'</head><body>'+content.innerHTML+'</body></html>';
   w.document.write(html);
   w.document.close();
-  setTimeout(function(){w.print();},600);
+  setTimeout(function(){w.print();},700);
 }
+
 
 function renderUsuarios(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getUsuarios').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Usuarios del Sistema</h1></div></div> <div class=\"dual-grid\"> <div class=\"card\"> <div class=\"card-title\" style=\"margin-bottom:16px\">Nuevo Usuario</div> <input type=\"hidden\" id=\"usrId\"> <div class=\"form-group\"><label class=\"form-label\">Nombre</label><input class=\"form-control\" id=\"usrNombre\" placeholder=\"Nombre completo\"></div> <div class=\"form-group\"><label class=\"form-label\">Correo Google *</label><input class=\"form-control\" id=\"usrCorreo\" type=\"email\" placeholder=\"usuario@gmail.com\"></div> <div class=\"form-group\"><label class=\"form-label\">Rol</label> <select class=\"form-control form-select\" id=\"usrRol\"> <option value=\"Supervisor\">Supervisor</option> <option value=\"Administrador\">Administrador</option> <option value=\"Superusuario\">Superusuario</option> </select> </div> <button class=\"btn btn-primary\" style=\"width:100%\" onclick=\"guardarUsuario()\"><i class=\"fas fa-save\"></i> Guardar</button> </div> <div class=\"card\"> <div class=\"card-title\" style=\"margin-bottom:16px\">Usuarios Registrados</div> ${!data.length?'<div class=\"empty-state\"><i class=\"fas fa-users\"></i><p>Sin usuarios</p></div>':` <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acc.</th></tr></thead> <tbody>${data.map(u=>`<tr><td><strong>${u.nombre}</strong></td><td>${u.correo}</td><td>${badge(u.rol)}</td><td>${badge(u.activo)}</td> <td><button class=\"btn btn-danger btn-sm btn-icon\" onclick=\"if(confirm('\u00bfDesactivar?'))call('desactivarUsuario','${u.id}').then(()=>{toast('Desactivado','warning');renderUsuarios()})\"><i class=\"fas fa-ban\"></i></button></td> </tr>`).join('')}</tbody></table></div>`} </div> </div>`; }); } function guardarUsuario(){ const correo=document.getElementById('usrCorreo').value.trim(); if(!correo){toast('Correo requerido','danger');return;} call('crearUsuario',{id:document.getElementById('usrId').value,nombre:document.getElementById('usrNombre').value,correo,rol:document.getElementById('usrRol').value}).then(()=>{toast('Usuario creado \u2713');renderUsuarios();}).catch(e=>toast(e.message,'danger')); } function renderBitacora(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getBitacora').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Bit\u00e1cora del Sistema</h1><p>Registro autom\u00e1tico de todas las acciones</p></div></div> <div class=\"card\"> ${!data.length?'<div class=\"empty-state\"><i class=\"fas fa-scroll\"></i><p>Sin registros</p></div>':` <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acci\u00f3n</th><th>Tabla</th><th>Detalle</th></tr></thead> <tbody>${data.map(r=>`<tr> <td style=\"white-space:nowrap;font-size:12px\">${fmt(r.fecha)}</td> <td style=\"font-size:13px\">${r.usuario}</td> <td>${badge(r.accion)}</td> <td><span class=\"badge badge-gray\">${r.tabla}</span></td> <td style=\"font-size:12px;color:var(--text-muted)\">${r.detalle||'\u2014'}</td> </tr>`).join('')}</tbody> </table></div>`} </div>`; }); } 
 
