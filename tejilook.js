@@ -292,4 +292,137 @@ function printFormato(){
   setTimeout(function(){w.print();},600);
 }
 
-;
+function renderUsuarios(){ document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>'; call('getUsuarios').then(data=>{ document.getElementById('main').innerHTML=` <div class="page-header"><div><h1>Usuarios del Sistema</h1></div></div> <div class="dual-grid"> <div class="card"> <div class="card-title" style="margin-bottom:16px">Nuevo Usuario</div> <input type="hidden" id="usrId"> <div class="form-group"><label class="form-label">Nombre</label><input class="form-control" id="usrNombre" placeholder="Nombre completo"></div> <div class="form-group"><label class="form-label">Correo Google *</label><input class="form-control" id="usrCorreo" type="email" placeholder="usuario@gmail.com"></div> <div class="form-group"><label class="form-label">Rol</label> <select class="form-control form-select" id="usrRol"> <option value="Supervisor">Supervisor</option> <option value="Administrador">Administrador</option> <option value="Superusuario">Superusuario</option> </select> </div> <button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()"><i class="fas fa-save"></i> Guardar</button> </div> <div class="card"> <div class="card-title" style="margin-bottom:16px">Usuarios Registrados</div> ${!data.length?'<div class="empty-state"><i class="fas fa-users"></i><p>Sin usuarios</p></div>':` <div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acc.</th></tr></thead> <tbody>${data.map(u=>`<tr><td><strong>${u.nombre}</strong></td><td>${u.correo}</td><td>${badge(u.rol)}</td><td>${badge(u.activo)}</td> <td><button class="btn btn-danger btn-sm btn-icon" onclick="if(confirm('¿Desactivar?'))call('desactivarUsuario','${u.id}').then(()=>{toast('Desactivado','warning');renderUsuarios()})"><i class="fas fa-ban"></i></button></td> </tr>`).join('')}</tbody></table></div>`} </div> </div>`; }); }
+
+function guardarUsuario(){ const correo=document.getElementById('usrCorreo').value.trim(); if(!correo){toast('Correo requerido','danger');return;} call('crearUsuario',{id:document.getElementById('usrId').value,nombre:document.getElementById('usrNombre').value,correo,rol:document.getElementById('usrRol').value}).then(()=>{toast('Usuario creado ✓');renderUsuarios();}).catch(e=>toast(e.message,'danger')); }
+
+function renderBitacora(){ document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>'; call('getBitacora').then(data=>{ document.getElementById('main').innerHTML=` <div class="page-header"><div><h1>Bitácora del Sistema</h1><p>Registro automático de todas las acciones</p></div></div> <div class="card"> ${!data.length?'<div class="empty-state"><i class="fas fa-scroll"></i><p>Sin registros</p></div>':` <div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Tabla</th><th>Detalle</th></tr></thead> <tbody>${data.map(r=>`<tr> <td style="white-space:nowrap;font-size:12px">${fmt(r.fecha)}</td> <td style="font-size:13px">${r.usuario}</td> <td>${badge(r.accion)}</td> <td><span class="badge badge-gray">${r.tabla}</span></td> <td style="font-size:12px;color:var(--text-muted)">${r.detalle||'—'}</td> </tr>`).join('')}</tbody> </table></div>`} </div>`; }); }
+
+function renderConfiguracion(){
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getConfig').then(function(cfg){
+    document.getElementById('main').innerHTML=
+      '<div class="page-header"><div><h1>Configuración del Sistema</h1><p>Logo, nombre y subtítulo que aparecen en el sidebar y reportes</p></div></div>'
+     +'<div class="card" style="max-width:560px">'
+       +'<div class="card-header"><div class="card-title">Identidad Visual</div></div>'
+       // Logo actual
+       +'<div class="form-group">'
+         +'<label class="form-label">Logo del Sistema</label>'
+         +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px">'
+           +'<div id="cfgLogoPreviewWrap" style="width:64px;height:64px;border-radius:12px;overflow:hidden;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;font-size:22px;font-weight:700;font-family:Space Grotesk,sans-serif;flex-shrink:0">'
+             +(cfg.sistLogoUrl
+               ? '<img id="cfgLogoImg" src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:cover">'
+               : '<span id="cfgLogoIcon">'+cfg.sistLogoIcon+'</span>')
+           +'</div>'
+           +'<div style="flex:1">'
+             +'<div class="img-upload-area" style="padding:10px;cursor:pointer" onclick="document.getElementById(\'cfgLogoFile\').click()">'
+               +'<input type="file" id="cfgLogoFile" accept="image/*" style="display:none" onchange="previewCfgLogo(this)">'
+               +'<i class="fas fa-cloud-upload-alt" style="color:var(--text-muted)"></i>'
+               +'<span style="font-size:12px;color:var(--text-muted);margin-left:6px">Subir imagen (PNG, JPG)</span>'
+             +'</div>'
+             +'<div style="font-size:11px;color:var(--text-light);margin-top:4px">Se guardará en Drive. Se usará en sidebar y reportes.</div>'
+           +'</div>'
+         +'</div>'
+       +'</div>'
+       // Nombre
+       +'<div class="form-group">'
+         +'<label class="form-label">Nombre del Sistema</label>'
+         +'<input class="form-control" id="cfgNombre" value="'+cfg.sistNombre+'" placeholder="Ej: Tejilook">'
+       +'</div>'
+       // Subtítulo
+       +'<div class="form-group">'
+         +'<label class="form-label">Subtítulo</label>'
+         +'<input class="form-control" id="cfgSub" value="'+cfg.sistSub+'" placeholder="Ej: Control de Producción">'
+       +'</div>'
+       // Preview sidebar
+       +'<div style="background:var(--primary);border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:16px">'
+         +'<div id="cfgPreviewIcon" style="width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;font-family:Space Grotesk,sans-serif;overflow:hidden;flex-shrink:0">'
+           +(cfg.sistLogoUrl ? '<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:cover">' : cfg.sistLogoIcon)
+         +'</div>'
+         +'<div>'
+           +'<div id="cfgPreviewName" style="color:#fff;font-weight:700;font-family:Space Grotesk,sans-serif;font-size:14px">'+cfg.sistNombre+'</div>'
+           +'<div id="cfgPreviewSub" style="color:rgba(255,255,255,.6);font-size:11px;letter-spacing:.5px;text-transform:uppercase">'+cfg.sistSub+'</div>'
+         +'</div>'
+       +'</div>'
+       +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px"><i class="fas fa-info-circle"></i> Vista previa del sidebar</div>'
+       +'<div style="display:flex;gap:8px">'
+         +'<button class="btn btn-primary" onclick="guardarConfig()"><i class="fas fa-save"></i> Guardar</button>'
+         +'<button class="btn btn-ghost" onclick="renderConfiguracion()"><i class="fas fa-rotate-right"></i> Cancelar</button>'
+       +'</div>'
+     +'</div>';
+    // Live preview on typing
+    document.getElementById('cfgNombre').addEventListener('input',function(){document.getElementById('cfgPreviewName').textContent=this.value;});
+    document.getElementById('cfgSub').addEventListener('input',function(){document.getElementById('cfgPreviewSub').textContent=this.value;});
+  }).catch(function(e){ document.getElementById('main').innerHTML='<div style="color:var(--danger)">Error: '+e.message+'</div>'; });
+}
+
+function previewCfgLogo(input){
+  var file=input.files[0]; if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wrap=document.getElementById('cfgLogoPreviewWrap');
+    var icon=document.getElementById('cfgPreviewIcon');
+    wrap.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+    if(icon) icon.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function guardarConfig(){
+  var nombre=document.getElementById('cfgNombre').value.trim();
+  var sub=document.getElementById('cfgSub').value.trim();
+  if(!nombre){toast('El nombre no puede estar vacío','danger');return;}
+  var btn=document.querySelector('[onclick="guardarConfig()"]');
+  btn.innerHTML='<div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Guardando...';
+  btn.disabled=true;
+  var fileInput=document.getElementById('cfgLogoFile');
+  var saveData=function(logoUrl){
+    var data={sistNombre:nombre,sistSub:sub};
+    if(logoUrl) data.sistLogoUrl=logoUrl;
+    call('saveConfig',data).then(function(){
+      toast('Configuración guardada ✓');
+      // Actualizar sidebar en vivo
+      var brandName=document.querySelector('.brand-text .name');
+      var brandSub=document.querySelector('.brand-text .sub');
+      var brandIcon=document.querySelector('.brand-icon');
+      if(brandName) brandName.textContent=nombre;
+      if(brandSub)  brandSub.textContent=sub;
+      if(logoUrl&&brandIcon){
+        brandIcon.innerHTML='<img src="'+logoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';
+      }
+      btn.innerHTML='<i class="fas fa-save"></i> Guardar';
+      btn.disabled=false;
+    }).catch(function(e){toast(e.message,'danger');btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+  };
+  if(fileInput.files[0]){
+    fileToBase64(fileInput.files[0]).then(function(b64){
+      call('subirLogoSistema',b64).then(function(r){
+        if(!r.ok){toast('Error subiendo logo: '+r.msg,'danger');}
+        saveData(r.ok?r.url:'');
+      }).catch(function(e){toast(e.message,'danger');btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+    });
+  } else {
+    saveData('');
+  }
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  if(isDark) document.getElementById('darkIcon').className='fas fa-sun';
+  call('getUsuarioActual').then(function(user){
+    currentUser=user;
+    document.getElementById('userName').textContent=user.nombre;
+    document.getElementById('userRole').textContent=user.rol;
+    document.getElementById('userAvatar').textContent=user.nombre.charAt(0).toUpperCase();
+  }).catch(function(){});
+  call('getConfig').then(function(cfg){
+    window._sysConfig=cfg;
+    var bn=document.querySelector('.brand-text .name');
+    var bs=document.querySelector('.brand-text .sub');
+    var bi=document.querySelector('.brand-icon');
+    if(bn&&cfg.sistNombre)bn.textContent=cfg.sistNombre;
+    if(bs&&cfg.sistSub)bs.textContent=cfg.sistSub;
+    if(bi&&cfg.sistLogoUrl){bi.style.background='transparent';bi.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">';}
+  }).catch(function(){});
+  var initView=window.location.hash?window.location.hash.replace('#',''):'dashboard';
+  navigate(initView||'dashboard');
+});
