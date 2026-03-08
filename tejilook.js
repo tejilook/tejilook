@@ -17,14 +17,68 @@ var _embData=[];
 function filtrarTablaEmbolsado(){ renderTablaEmbolsadoFiltrada(); }
 function renderTablaEmbolsadoFiltrada(){ var el=document.getElementById('tablaEmbolsado'); if(!el)return; var q=(document.getElementById('embFiltroOrden')||{}).value||''; var data=q?_embData.filter(function(r){return String(r.noOrden).toLowerCase().includes(q.toLowerCase());}):_embData; if(!data.length){el.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin registros</p></div>';return;} var rows=''; data.forEach(function(r){ rows+='<tr>'+'<td>'+fmt(r.fecha)+'</td>'+'<td><strong>'+r.noOrden+'</strong></td>'+'<td style="white-space:nowrap">'+'<button class="btn btn-ghost btn-sm btn-icon" title="Ver detalle" onclick="verDetalleEmb(this)" data-norden="'+r.noOrden+'" data-id="'+r.id+'"><i class="fas fa-eye"></i></button> '+'<button class="btn btn-success btn-sm btn-icon" title="Imprimir reporte consolidado" onclick="imprimirReporteEmb(\''+r.noOrden+'\')"><i class="fas fa-print"></i></button> '+'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="eliminarEmb(this)" data-id="'+r.id+'"><i class="fas fa-trash"></i></button>'+'</td></tr>'; }); el.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px"><div class="search-bar" style="width:220px"><i class="fas fa-search"></i><input type="text" id="embFiltroOrden" placeholder="Filtrar por NoOrden..." oninput="filtrarTablaEmbolsado()" value="'+(((document.getElementById('embFiltroOrden')||{}).value)||'')+'"></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>NoOrden</th><th>Acc.</th></tr></thead><tbody>'+rows+'</tbody></table></div>'; }
 
-function verDetalleEmb(btn){ var noOrden=btn.dataset.norden; var regId=btn.dataset.id; call('getResumenEmbolsado',noOrden).then(function(r){ if(!r.ok){toast(r.msg,'danger');return;} var html='<div style="font-size:13px;padding:4px 0"><div style="margin-bottom:8px;font-weight:600">'+noOrden+' — '+r.modelo.modelo+'</div>'; r.registros.forEach(function(reg){ if(reg.id!==regId)return; reg.tallas.forEach(function(t){ html+='<div style="margin-bottom:6px"><strong>Talla '+t.talla+'</strong> — Total: <span style="color:var(--primary);font-weight:700">'+t.totalTalla+' suét.</span>'; t.grupos.forEach(function(g){html+='<div style="padding-left:12px;color:var(--text-muted)">'+g.cantidadBolsas+' bolsa(s) × '+g.pzPorBolsa+' pzas = '+(g.cantidadBolsas*g.pzPorBolsa)+' suét.</div>';}); html+='</div>'; }); }); html+='</div>'; var tr=btn.closest('tr'); var existing=tr.nextElementSibling; if(existing&&existing.classList.contains('detail-row')){existing.remove();return;} var td=document.createElement('tr'); td.className='detail-row'; td.innerHTML='<td colspan="3" style="background:var(--surface-2);padding:10px 16px">'+html+'</td>'; tr.parentNode.insertBefore(td,tr.nextSibling); }).catch(function(e){toast(e.message,'danger');}); }
+function verDetalleEmb(btn){
+  var noOrden=btn.dataset.norden;
+  var regId=btn.dataset.id;
+  call('getResumenEmbolsado',noOrden).then(function(r){
+    if(!r.ok){toast(r.msg,'danger');return;}
+    var m=r.modelo;
+    var regTarget=null;
+    r.registros.forEach(function(reg){if(reg.id===regId)regTarget=reg;});
+    if(!regTarget){toast('Registro no encontrado','danger');return;}
+    var html='<div style="font-size:13px">';
+    html+='<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">';
+    if(m.foto) html+='<img src="'+m.foto+'" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">';
+    html+='<div><div style="font-weight:700;font-size:15px">'+noOrden+' — '+m.modelo+'</div>';
+    html+='<div style="color:var(--text-muted);font-size:12px">'+fmt(regTarget.fecha||'')+'</div></div>';
+    html+='</div>';
+    html+='<table style="width:100%;border-collapse:collapse">';
+    html+='<thead><tr style="background:var(--surface-2)">';
+    html+='<th style="padding:8px 12px;text-align:left;font-size:12px;color:var(--text-muted)">Talla</th>';
+    html+='<th style="padding:8px 12px;text-align:center;font-size:12px;color:var(--text-muted)">Distribución</th>';
+    html+='<th style="padding:8px 12px;text-align:center;font-size:12px;color:var(--text-muted)">Total suéteres</th>';
+    html+='</tr></thead><tbody>';
+    var tot=0;
+    regTarget.tallas.forEach(function(t){
+      html+='<tr style="border-bottom:1px solid var(--border)">';
+      html+='<td style="padding:8px 12px;font-weight:600">'+t.talla+'</td>';
+      html+='<td style="padding:8px 12px;text-align:center;font-size:12px;color:var(--text-muted)">'+t.grupos.map(function(g){return g.cantidadBolsas+' bolsa(s) × '+g.pzPorBolsa+' pzas';}).join('<br>')+'</td>';
+      html+='<td style="padding:8px 12px;text-align:center;font-weight:700;color:var(--primary);font-size:15px">'+t.totalTalla+'</td>';
+      html+='</tr>';
+      tot+=t.totalTalla;
+    });
+    html+='<tr style="background:var(--surface-2)">';
+    html+='<td colspan="2" style="padding:10px 12px;text-align:right;font-weight:700">Total general</td>';
+    html+='<td style="padding:10px 12px;text-align:center;font-weight:700;color:var(--primary);font-size:16px">'+tot+' suét.</td>';
+    html+='</tr>';
+    html+='</tbody></table></div>';
+    // Usar modal genérico o crear uno temporal
+    var existing=document.getElementById('embDetalleModal');
+    if(!existing){
+      var overlay=document.createElement('div');
+      overlay.id='embDetalleModal';
+      overlay.className='modal-overlay';
+      overlay.style.zIndex='9999';
+      overlay.innerHTML='<div class="modal" style="max-width:520px;width:92%">'
+        +'<div class="modal-header"><div class="modal-title">Detalle de Registro</div>'
+        +'<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'embDetalleModal\').classList.remove(\'open\')"><i class="fas fa-times"></i></button>'
+        +'</div>'
+        +'<div class="modal-body" id="embDetalleBody" style="padding:16px;max-height:70vh;overflow-y:auto"></div>'
+        +'</div>';
+      overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.classList.remove('open');});
+      document.body.appendChild(overlay);
+    }
+    document.getElementById('embDetalleBody').innerHTML=html;
+    document.getElementById('embDetalleModal').classList.add('open');
+  }).catch(function(e){toast(e.message,'danger');});
+}
 
 function imprimirReporteEmb(noOrden){
   call('getResumenEmbolsado',noOrden).then(function(r){
     if(!r.ok){toast(r.msg,'danger');return;}
     var m=r.modelo;
     var hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
-    // Consolidar todas las tallas de todos los registros
+    // Consolidar tallas de todos los registros del NoOrden
     var tallasMap={};
     r.registros.forEach(function(reg){
       reg.tallas.forEach(function(t){
@@ -49,48 +103,69 @@ function imprimirReporteEmb(noOrden){
     });
     var fotoHtml=m.foto
       ? '<img src="'+m.foto+'" style="width:144px;height:144px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb">'
-      : '<div style="width:144px;height:144px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px;text-align:center">Sin foto</div>';
+      : '<div style="width:144px;height:144px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px;text-align:center;padding:8px">Sin foto</div>';
+    // Logo SVG tejilook (inline, no depende de URL externa)
+    var logoSvg='<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      +'<rect width="44" height="44" rx="10" fill="#1d4ed8"/>'
+      +'<text x="22" y="30" font-family="Arial" font-weight="900" font-size="22" fill="white" text-anchor="middle">T</text>'
+      +'</svg>';
     var css='*{margin:0;padding:0;box-sizing:border-box}'
-      +'body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:28px}'
-      +'@media print{button{display:none!important}}'
-      +'.header{display:flex;gap:24px;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1d4ed8}'
+      +'body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:28px;max-width:800px;margin:0 auto}'
+      +'@media print{button{display:none!important}@page{margin:15mm}}'
+      +'.brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}'
+      +'.brand-name{font-size:22px;font-weight:900;color:#1d4ed8;letter-spacing:-0.5px}'
+      +'.brand-sub{font-size:11px;color:#6b7280;letter-spacing:1px;text-transform:uppercase}'
+      +'.top-bar{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid #1d4ed8;margin-bottom:20px}'
+      +'.doc-title{font-size:13px;color:#374151;text-align:right}'
+      +'.doc-title strong{display:block;font-size:16px;color:#111}'
+      +'.header{display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb}'
       +'.info{flex:1}'
-      +'.info h1{font-size:17px;color:#1d4ed8;margin-bottom:12px;font-weight:700}'
       +'.info table{border-collapse:collapse;width:100%}'
       +'.info td{padding:4px 6px;vertical-align:top}'
-      +'.info td:first-child{font-weight:600;color:#374151;width:120px;white-space:nowrap}'
-      +'.st{font-size:12px;font-weight:700;color:#1d4ed8;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px}'
-      +'.dt{width:100%;border-collapse:collapse;border:1px solid #e5e7eb}'
+      +'.info td:first-child{font-weight:600;color:#374151;width:110px;white-space:nowrap;font-size:12px}'
+      +'.info td:last-child{font-size:12px}'
+      +'.st{font-size:11px;font-weight:700;color:#1d4ed8;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.8px}'
+      +'.dt{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden}'
       +'.dt thead{background:#1d4ed8;color:#fff}'
-      +'.dt th{padding:8px 12px;text-align:center;font-size:12px}'
-      +'.tr{background:#eff6ff}'
-      +'.footer{margin-top:20px;font-size:11px;color:#9ca3af;text-align:right;border-top:1px solid #e5e7eb;padding-top:8px}'
-      +'.btn{background:#1d4ed8;color:#fff;border:none;padding:10px 32px;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;margin-top:20px;display:block;margin-left:auto;margin-right:auto}';
-    var body='<div class="header">'
-      +fotoHtml
-      +'<div class="info"><h1>Reporte de Embolsado</h1><table>'
-      +'<tr><td>No. Orden:</td><td><strong>'+noOrden+'</strong></td></tr>'
-      +'<tr><td>Modelo:</td><td>'+(m.modelo||'—')+'</td></tr>'
-      +'<tr><td>Cliente:</td><td>'+(m.nombreCliente||'—')+'</td></tr>'
-      +'<tr><td>Maquila:</td><td>'+(m.nombreMaquila||'—')+'</td></tr>'
-      +'<tr><td>F. Entrega:</td><td>'+(m.fechaEntrega?fmt(m.fechaEntrega):'—')+'</td></tr>'
-      +'<tr><td>F. Impresión:</td><td>'+hoy+'</td></tr>'
-      +'</table></div></div>'
+      +'.dt th{padding:9px 12px;text-align:center;font-size:12px}'
+      +'.dt th:first-child{text-align:left}'
+      +'.tr-tot{background:#eff6ff}'
+      +'.footer{margin-top:20px;font-size:10px;color:#9ca3af;text-align:right;border-top:1px solid #e5e7eb;padding-top:8px}'
+      +'.btn-print{background:#1d4ed8;color:#fff;border:none;padding:10px 36px;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;margin-top:20px;display:block;margin:20px auto 0}';
+    var body=''
+      +'<div class="top-bar">'
+        +'<div class="brand">'+logoSvg+'<div><div class="brand-name">TejiLook</div><div class="brand-sub">Control de Producción</div></div></div>'
+        +'<div class="doc-title"><span>Reporte de Embolsado</span><strong>No. Orden: '+noOrden+'</strong></div>'
+      +'</div>'
+      +'<div class="header">'
+        +fotoHtml
+        +'<div class="info"><table>'
+          +'<tr><td>Modelo:</td><td><strong>'+(m.modelo||'—')+'</strong></td></tr>'
+          +'<tr><td>Cliente:</td><td>'+(m.nombreCliente||'—')+'</td></tr>'
+          +'<tr><td>Maquila:</td><td>'+(m.nombreMaquila||'—')+'</td></tr>'
+          +'<tr><td>F. Entrega:</td><td>'+(m.fechaEntrega?fmt(m.fechaEntrega):'—')+'</td></tr>'
+          +'<tr><td>F. Impresión:</td><td>'+hoy+'</td></tr>'
+        +'</table></div>'
+      +'</div>'
       +'<div class="st">Detalle Consolidado de Embolsado</div>'
-      +'<table class="dt"><thead><tr><th>Talla</th><th>Total Bolsas</th><th>Distribución</th><th>Total Suéteres</th></tr></thead>'
-      +'<tbody>'+tallaRows
-      +'<tr class="tr"><td colspan="3" style="text-align:right;padding:10px 12px;font-weight:700">TOTAL GENERAL</td>'
-      +'<td style="text-align:center;font-size:16px;font-weight:700;color:#1d4ed8;padding:10px 12px">'+grandTotal+' suét.</td></tr>'
-      +'</tbody></table>'
-      +'<div class="footer">Tejilook ERP — Generado el '+hoy+'</div>'
-      +'<button class="btn" onclick="window.print()">Imprimir</button>';
+      +'<table class="dt"><thead><tr>'
+        +'<th style="text-align:left;padding:9px 12px">Talla</th>'
+        +'<th>Total Bolsas</th>'
+        +'<th>Distribución</th>'
+        +'<th>Total Suéteres</th>'
+      +'</tr></thead><tbody>'+tallaRows
+      +'<tr class="tr-tot">'
+        +'<td colspan="3" style="text-align:right;padding:10px 12px;font-weight:700;font-size:13px">TOTAL GENERAL</td>'
+        +'<td style="text-align:center;font-size:17px;font-weight:700;color:#1d4ed8;padding:10px 12px">'+grandTotal+' suét.</td>'
+      +'</tr></tbody></table>'
+      +'<div class="footer">TejiLook ERP — Generado el '+hoy+'</div>'
+      +'<button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>';
     var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Embolsado '+noOrden+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
-    var win=window.open('','_blank','width=820,height=700');
+    var win=window.open('','_blank','width=860,height=720');
     win.document.write(html);
     win.document.close();
   }).catch(function(e){toast('Error: '+e.message,'danger');});
 }
-
 
 function eliminarEmb(btn){ var id=btn.dataset.id; if(!window.confirm('Eliminar este registro de embolsado?'))return; call('eliminarEmbolsado',id).then(function(){toast('Eliminado','danger');cargarTablaEmbolsado();}).catch(function(e){toast(e.message,'danger');}); }
 
