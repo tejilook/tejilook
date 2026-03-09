@@ -692,7 +692,107 @@ function printFormato(){
 }
 
 
-function renderUsuarios(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getUsuarios').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Usuarios del Sistema</h1></div></div> <div class=\"dual-grid\"> <div class=\"card\"> <div class=\"card-title\" style=\"margin-bottom:16px\">Nuevo Usuario</div> <input type=\"hidden\" id=\"usrId\"> <div class=\"form-group\"><label class=\"form-label\">Nombre</label><input class=\"form-control\" id=\"usrNombre\" placeholder=\"Nombre completo\"></div> <div class=\"form-group\"><label class=\"form-label\">Correo Google *</label><input class=\"form-control\" id=\"usrCorreo\" type=\"email\" placeholder=\"usuario@gmail.com\"></div> <div class=\"form-group\"><label class=\"form-label\">Rol</label> <select class=\"form-control form-select\" id=\"usrRol\"> <option value=\"Supervisor\">Supervisor</option> <option value=\"Administrador\">Administrador</option> <option value=\"Superusuario\">Superusuario</option> </select> </div> <button class=\"btn btn-primary\" style=\"width:100%\" onclick=\"guardarUsuario()\"><i class=\"fas fa-save\"></i> Guardar</button> </div> <div class=\"card\"> <div class=\"card-title\" style=\"margin-bottom:16px\">Usuarios Registrados</div> ${!data.length?'<div class=\"empty-state\"><i class=\"fas fa-users\"></i><p>Sin usuarios</p></div>':` <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acc.</th></tr></thead> <tbody>${data.map(u=>`<tr><td><strong>${u.nombre}</strong></td><td>${u.correo}</td><td>${badge(u.rol)}</td><td>${badge(u.activo)}</td> <td><button class=\"btn btn-danger btn-sm btn-icon\" onclick=\"if(confirm('\u00bfDesactivar?'))call('desactivarUsuario','${u.id}').then(()=>{toast('Desactivado','warning');renderUsuarios()})\"><i class=\"fas fa-ban\"></i></button></td> </tr>`).join('')}</tbody></table></div>`} </div> </div>`; }); } function guardarUsuario(){ const correo=document.getElementById('usrCorreo').value.trim(); if(!correo){toast('Correo requerido','danger');return;} call('crearUsuario',{id:document.getElementById('usrId').value,nombre:document.getElementById('usrNombre').value,correo,rol:document.getElementById('usrRol').value}).then(()=>{toast('Usuario creado \u2713');renderUsuarios();}).catch(e=>toast(e.message,'danger')); } function renderBitacora(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getBitacora').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Bit\u00e1cora del Sistema</h1><p>Registro autom\u00e1tico de todas las acciones</p></div></div> <div class=\"card\"> ${!data.length?'<div class=\"empty-state\"><i class=\"fas fa-scroll\"></i><p>Sin registros</p></div>':` <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acci\u00f3n</th><th>Tabla</th><th>Detalle</th></tr></thead> <tbody>${data.map(r=>`<tr> <td style=\"white-space:nowrap;font-size:12px\">${fmt(r.fecha)}</td> <td style=\"font-size:13px\">${r.usuario}</td> <td>${badge(r.accion)}</td> <td><span class=\"badge badge-gray\">${r.tabla}</span></td> <td style=\"font-size:12px;color:var(--text-muted)\">${r.detalle||'\u2014'}</td> </tr>`).join('')}</tbody> </table></div>`} </div>`; }); } 
+function renderUsuarios(){
+  if(currentUser && currentUser.rol !== 'Superusuario'){
+    document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-lock"></i><p>Acceso solo para Superusuario</p></div>';
+    return;
+  }
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getUsuarios').then(function(data){
+    data = data || [];
+    var tblHtml = !data.length
+      ? '<div class="empty-state"><i class="fas fa-users"></i><p>Sin usuarios</p></div>'
+      : '<div class="table-wrap"><table class="table"><thead><tr>'
+          +'<th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acc.</th>'
+        +'</tr></thead><tbody>'
+        + data.map(function(u){
+            var uid = u.id;
+            return '<tr>'
+              +'<td><strong>'+u.nombre+'</strong></td>'
+              +'<td style="font-size:12px">'+u.correo+'</td>'
+              +'<td>'+badge(u.rol)+'</td>'
+              +'<td>'+badge(u.activo)+'</td>'
+              +'<td style="white-space:nowrap">'
+                +'<button class="btn btn-warning btn-sm btn-icon" title="Desactivar" '
+                  +'onclick="call(\'desactivarUsuario\',\''+uid+'\').then(function(){toast(\'Desactivado\',\'warning\');renderUsuarios();})"><i class="fas fa-ban"></i></button> '
+                +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" '
+                  +'onclick="if(confirm(\'\u00bfEliminar permanentemente?\'))call(\'eliminarUsuario\',\''+uid+'\').then(function(){toast(\'Eliminado\',\'danger\');renderUsuarios();})"><i class="fas fa-trash"></i></button>'
+              +'</td>'
+            +'</tr>';
+          }).join('')
+        +'</tbody></table></div>';
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div><h1>Usuarios del Sistema</h1></div></div>'
+      +'<div class="dual-grid">'
+        +'<div class="card">'
+          +'<div class="card-title" style="margin-bottom:16px">Nuevo Usuario</div>'
+          +'<input type="hidden" id="usrId">'
+          +'<div class="form-group"><label class="form-label">Nombre</label>'
+            +'<input class="form-control" id="usrNombre" placeholder="Nombre completo"></div>'
+          +'<div class="form-group"><label class="form-label">Correo Google *</label>'
+            +'<input class="form-control" id="usrCorreo" type="email" placeholder="usuario@gmail.com"></div>'
+          +'<div class="form-group"><label class="form-label">Rol</label>'
+            +'<select class="form-control form-select" id="usrRol">'
+              +'<option value="Administrador">Administrador</option>'
+              +'<option value="Superusuario">Superusuario</option>'
+            +'</select></div>'
+          +'<button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">'
+            +'<i class="fas fa-save"></i> Guardar</button>'
+        +'</div>'
+        +'<div class="card">'
+          +'<div class="card-title" style="margin-bottom:16px">Usuarios Registrados</div>'
+          + tblHtml
+        +'</div>'
+      +'</div>';
+  }).catch(function(err){ toast(err.message,'danger'); });
+}
+
+function guardarUsuario(){
+  var correo = document.getElementById('usrCorreo').value.trim();
+  if(!correo){ toast('Correo requerido','danger'); return; }
+  call('crearUsuario',{
+    id:     document.getElementById('usrId').value,
+    nombre: document.getElementById('usrNombre').value,
+    correo: correo,
+    rol:    document.getElementById('usrRol').value
+  }).then(function(){ toast('Usuario guardado ✓'); renderUsuarios(); })
+    .catch(function(err){ toast(err.message,'danger'); });
+}
+
+function renderBitacora(){
+  if(currentUser && currentUser.rol !== 'Superusuario'){
+    document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-lock"></i><p>Acceso solo para Superusuario</p></div>';
+    return;
+  }
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getBitacora').then(function(data){
+    data = data || [];
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div><h1>Bitácora del Sistema</h1>'
+        +'<p>Registro automático de todas las acciones</p></div></div>'
+      +'<div class="card">'
+      +(!data.length
+        ? '<div class="empty-state"><i class="fas fa-scroll"></i><p>Sin registros</p></div>'
+        : '<div class="table-wrap"><table class="table"><thead><tr>'
+            +'<th>Fecha</th><th>Usuario</th><th>Acción</th><th>Tabla</th><th>Detalle</th>'
+          +'</tr></thead><tbody>'
+          +data.map(function(r){
+              return '<tr>'
+                +'<td style="white-space:nowrap;font-size:12px">'+fmt(r.fecha)+'</td>'
+                +'<td style="font-size:13px">'+(r.usuario||'\u2014')+'</td>'
+                +'<td>'+badge(r.accion)+'</td>'
+                +'<td><span class="badge badge-gray">'+(r.tabla||'\u2014')+'</span></td>'
+                +'<td style="font-size:12px;color:var(--text-muted)">'+(r.detalle||'\u2014')+'</td>'
+              +'</tr>';
+            }).join('')
+          +'</tbody></table></div>'
+      )
+      +'</div>';
+  }).catch(function(err){
+    document.getElementById('main').innerHTML =
+      '<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>Error: '+err.message+'</p></div>';
+  });
+}
 
 function renderConfiguracion(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
@@ -822,6 +922,8 @@ window.addEventListener('DOMContentLoaded',function(){
     document.getElementById('userName').textContent=user.nombre;
     document.getElementById('userRole').textContent=user.rol;
     document.getElementById('userAvatar').textContent=user.nombre.charAt(0).toUpperCase();
+    var isSu = user.rol === 'Superusuario';
+    document.querySelectorAll('.nav-sistema').forEach(function(el){ el.style.display = isSu ? '' : 'none'; });
   }).catch(function(){});
   call('getConfig').then(function(cfg){
     window._sysConfig=cfg;
