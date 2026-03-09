@@ -918,13 +918,37 @@ function cargarStatsPeriodo(periodo){
 window.addEventListener('DOMContentLoaded',function(){
   if(isDark) document.getElementById('darkIcon').className='fas fa-sun';
   call('getUsuarioActual').then(function(user){
+    // Sin acceso — mostrar pantalla de bloqueo
+    if(!user || user.acceso === false){
+      document.getElementById('sidebar').style.display='none';
+      document.getElementById('topbar').style.display='none';
+      document.getElementById('toast-container').style.display='none';
+      document.getElementById('main').style.margin='0';
+      document.getElementById('main').style.padding='0';
+      document.getElementById('main').innerHTML=
+        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">'
+          +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;max-width:420px;width:92%;text-align:center;box-shadow:var(--shadow-lg)">'
+            +'<div style="width:72px;height:72px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px">🔒</div>'
+            +'<h2 style="font-family:Space Grotesk,sans-serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:10px">Acceso Denegado</h2>'
+            +'<p style="color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:24px">'+(user && user.motivo ? user.motivo : 'No tienes permiso para acceder a este sistema.')+'</p>'
+            +(user && user.correo ? '<p style="font-size:12px;color:var(--text-light);margin-bottom:24px">Cuenta: <strong>'+user.correo+'</strong></p>' : '')
+            +'<p style="font-size:12px;color:var(--text-light)">Contacta al administrador del sistema para solicitar acceso.</p>'
+          +'</div>'
+        +'</div>';
+      return;
+    }
     currentUser=user;
     document.getElementById('userName').textContent=user.nombre;
     document.getElementById('userRole').textContent=user.rol;
     document.getElementById('userAvatar').textContent=user.nombre.charAt(0).toUpperCase();
     var isSu = user.rol === 'Superusuario';
     document.querySelectorAll('.nav-sistema').forEach(function(el){ el.style.display = isSu ? '' : 'none'; });
-  }).catch(function(){});
+  }).catch(function(err){
+    document.getElementById('main').innerHTML=
+      '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center">'
+        +'<div style="text-align:center;padding:40px"><p style="color:var(--danger)">Error de conexión: '+err.message+'</p></div>'
+      +'</div>';
+  });
   call('getConfig').then(function(cfg){
     window._sysConfig=cfg;
     var bn=document.querySelector('.brand-text .name');
