@@ -442,7 +442,125 @@ function guardarSalida(){
 
 
 function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Buscar por NoOrden</h1><p>Expediente completo: modelo, entradas, producci\u00f3n, embolsado, salidas</p></div></div> <div class=\"card\" style=\"max-width:500px;margin-bottom:20px\"> <div style=\"display:flex;gap:10px\"> <input class=\"form-control\" id=\"buscarNoOrden\" placeholder=\"Ingresa el NoOrden...\" value=\"${noOrdenInicial||''}\"> <button class=\"btn btn-primary\" onclick=\"ejecutarBusqueda()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div id=\"resultadoBusqueda\"></div>`; if(noOrdenInicial) ejecutarBusqueda(); } function ejecutarBusqueda(){ const no=document.getElementById('buscarNoOrden').value.trim(); if(!no){toast('Ingresa un NoOrden','danger');return;} document.getElementById('resultadoBusqueda').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div> Buscando expediente...</div>'; call('buscarNoOrden',no).then(r=>{ if(!r.ok){document.getElementById('resultadoBusqueda').innerHTML=`<div class=\"empty-state\"><i class=\"fas fa-search\"></i><p>${r.msg}</p></div>`;return;} renderExpediente(r,'resultadoBusqueda'); }).catch(e=>document.getElementById('resultadoBusqueda').innerHTML=`<div style=\"color:var(--danger);padding:20px\">${e.message}</div>`); } function abrirExpediente(noOrden){ document.getElementById('expTitle').textContent='Expediente NoOrden: '+noOrden; document.getElementById('expContent').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; openModal('modalExpediente'); call('buscarNoOrden',noOrden).then(r=>{ if(!r.ok){document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">'+r.msg+'</p>';return;} renderExpediente(r,'expContent'); }).catch(e=>{ document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">Error: '+(e.message||e)+'</p>'; }); } function renderExpediente(r, containerId){ const m=r.modelo; const totalEnt=r.entradas&&r.entradas.resumen?r.entradas.resumen.reduce((s,t)=>s+t.entradaFrente,0):0; const totalEmb=(r.embolsado&&Array.isArray(r.embolsado))?r.embolsado.reduce((s,e)=>s+(+e.cantidad||0),0):0; const totalProd=r.produccion?r.produccion.length:0; const totalSalidas=r.salidas?r.salidas.length:0; document.getElementById(containerId).innerHTML=` <div class=\"card\" style=\"margin-bottom:16px\"> <div style=\"display:flex;gap:16px;align-items:flex-start\"> ${m.foto?'<img src=\"'+m.foto+'\" style=\"width:88px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid var(--border)\" onerror=\"this.style.display=\\\'none\\\'\">':''} <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;flex:1\"> <div><div class=\"form-label\">NoOrden</div><strong style=\"font-size:18px;font-family:'Space Grotesk',sans-serif;color:var(--primary)\">${m.noOrden}</strong></div> <div><div class=\"form-label\">Modelo</div><strong>${m.modelo}</strong></div> <div><div class=\"form-label\">Cliente</div>${m.nombreCliente}</div> <div><div class=\"form-label\">Maquila</div>${m.nombreMaquila||'\u2014'}</div> <div><div class=\"form-label\">F.Entrega</div>${fmt(m.fechaEntrega)}</div> </div> </div> <div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:16px\"> ${m.tallas?m.tallas.map(t=>`<div class=\"talla-chip\"><div class=\"tc-talla\">${t.talla}</div><div class=\"tc-sub\">${t.cantidadSueter} su\u00e9ter</div><div class=\"tc-sub\" style=\"color:var(--text-light)\">F${t.frentes} E${t.espaldas} M${t.mangas}</div></div>`).join(''):''} </div> </div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px\"> <div class=\"stat-card\" style=\"--stat-color:var(--info);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-ramp-box\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEnt}</div><div class=\"stat-label\">Piezas Entrada</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--success);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-person-digging\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalProd}</div><div class=\"stat-label\">Reg. Producci\u00f3n</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--warning);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-box-open\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEmb}</div><div class=\"stat-label\">Embolsados</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--primary);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-fast\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalSalidas}</div><div class=\"stat-label\">Salidas</div></div></div> </div> ${r.entradas&&r.entradas.resumen&&r.entradas.resumen.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-ramp-box\"></i> Entradas por Talla</div> ${r.entradas.resumen.map(t=>{ const pctF=t.esperadoFrente>0?Math.min(100,Math.round(t.entradaFrente/t.esperadoFrente*100)):0; return `<div style=\"background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px\"> <div style=\"display:flex;justify-content:space-between;margin-bottom:8px\"><strong>Talla ${t.talla}</strong><span class=\"${t.faltaFrente===0?'badge badge-success':'badge badge-warning'}\">${t.faltaFrente===0?'Completa':'Pendiente'}</span></div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px\"> <div>Frentes: ${t.entradaFrente}/${t.esperadoFrente}<div class=\"progress\"><div class=\"progress-bar ${pctF>=100?'progress-ok':'progress-warn'}\" style=\"width:${pctF}%\"></div></div></div> <div>Espaldas: ${t.entradaEspalda}/${t.esperadoEspalda}</div> <div>Mangas: ${t.entradaManga}/${t.esperadoManga}</div> </div></div>`; }).join('')} </div>`:''  } ${r.produccion&&r.produccion.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-person-digging\"></i> Producci\u00f3n Registrada</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${r.produccion.map(p=>`<tr><td>${fmt(p.fecha)}</td><td>${p.trabajador}</td><td><span class=\"badge badge-info\">${p.proceso}</span></td><td>${(p.tallas||[]).map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"color:var(--text-muted)\">${p.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div> </div>`:''} ${r.embolsado&&r.embolsado.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-box-open\"></i> Embolsado</div> <div style=\"display:flex;flex-wrap:wrap;gap:8px\">${r.embolsado.map(e=>`<span class=\"badge badge-warning\" style=\"font-size:13px;padding:6px 12px\">${e.talla}: ${e.cantidad}</span>`).join('')}</div> </div>`:''} ${r.salidas&&r.salidas.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-fast\"></i> Salidas a Maquila</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Maquila</th><th>Tallas enviadas</th><th>Formato</th></tr></thead><tbody> ${r.salidas.map(s=>`<tr><td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td>${s.detalle?s.detalle.map(d=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${d.talla}:${d.total}</span>`).join(''):'\u2014'}</td><td><button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i></button></td></tr>`).join('')} </tbody></table></div> </div>`:''}`; } function renderVerEntradas(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getEntradas').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Ver Entradas</h1></div><button class=\"btn btn-primary\" onclick=\"navigate('entradas')\"><i class=\"fas fa-plus\"></i> Nueva Entrada</button></div> <div class=\"card\"> <div class=\"toolbar\"> <div class=\"search-bar\" style=\"flex:1;max-width:300px\"><i class=\"fas fa-search\"></i><input id=\"buscarEntrada\" placeholder=\"Buscar NoOrden, trabajador...\" oninput=\"filtrarEntradas()\" type=\"text\"></div> </div> <div id=\"tablaEntradas\"></div> </div>`; window._entradasAll=data; filtrarEntradas(); }); } function filtrarEntradas(){ const q=(document.getElementById('buscarEntrada').value||'').toLowerCase(); renderTablaEntradas(window._entradasAll.filter(e=>e.noOrden.toString().toLowerCase().includes(q)||e.nombreTrabajador.toLowerCase().includes(q))); } function renderTablaEntradas(data){ if(!data.length){document.getElementById('tablaEntradas').innerHTML='<div class=\"empty-state\"><i class=\"fas fa-inbox\"></i><p>Sin entradas</p></div>';return;} document.getElementById('tablaEntradas').innerHTML=`<div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Fecha</th><th>NoOrden</th><th>Modelo</th><th>Trabajador</th><th>Acc.</th></tr></thead> <tbody>${data.map(e=>`<tr><td>${fmt(e.fecha)}</td><td><strong>${e.noOrden}</strong></td><td>${e.nombreModelo||'\u2014'}</td><td>${e.nombreTrabajador||'\u2014'}</td> <td><button class=\"btn btn-info btn-sm\" onclick=\"navigate('entradas');setTimeout(()=>{document.getElementById('resNoOrden').value='${e.noOrden}';verResumenEntrada()},500)\"><i class=\"fas fa-chart-bar\"></i> Ver resumen</button></td> </tr>`).join('')}</tbody></table></div>`; } function renderVerProduccion(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getTrabajadoresActivos').then(trabajadores=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Ver Producci\u00f3n</h1></div></div> <div class=\"card\" style=\"margin-bottom:20px\"> <div class=\"toolbar\" style=\"flex-wrap:wrap\"> <select class=\"form-control form-select\" id=\"filtProdTrab\" style=\"width:200px\"> <option value=\"\">Todos los trabajadores</option> ${trabajadores.map(t=>`<option value=\"${t.id}\">${t.nombre}</option>`).join('')} </select> <input class=\"form-control\" id=\"filtProdFI\" type=\"date\" style=\"width:160px\"> <input class=\"form-control\" id=\"filtProdFF\" type=\"date\" style=\"width:160px\"> <button class=\"btn btn-primary\" onclick=\"buscarProduccion()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div class=\"card\"><div id=\"tablaProdVer\"><div class=\"empty-state\"><i class=\"fas fa-search\"></i><p>Aplica filtros para ver resultados</p></div></div></div>`; }); } function buscarProduccion(){ document.getElementById('tablaProdVer').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getProduccionFiltro',document.getElementById('filtProdTrab').value,document.getElementById('filtProdFI').value,document.getElementById('filtProdFF').value).then(data=>{ if(!data.length){document.getElementById('tablaProdVer').innerHTML='<div class=\"empty-state\"><i class=\"fas fa-inbox\"></i><p>Sin resultados</p></div>';return;} document.getElementById('tablaProdVer').innerHTML=`<div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Orden</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${data.map(r=>`<tr><td>${fmt(r.fecha)}</td><td>${r.nombreTrabajador}</td><td><strong>${r.noOrden}</strong></td><td><span class=\"badge badge-info\">${r.proceso}</span></td><td>${r.tallas.map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"font-size:12px;color:var(--text-muted)\">${r.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div>`; }); } 
-function renderVerSalidas(){ document.getElementById('main').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; call('getSalidas').then(data=>{ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Ver Salidas</h1></div><button class=\"btn btn-primary\" onclick=\"navigate('salidas')\"><i class=\"fas fa-plus\"></i> Nueva Salida</button></div> <div class=\"card\"> ${!data.length?'<div class=\"empty-state\"><i class=\"fas fa-truck-fast\"></i><p>Sin salidas registradas</p></div>':` <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Fecha</th><th>Maquila</th><th>NoOrden</th><th>Modelo</th><th>Cliente</th><th>Muestra</th><th>Moldes</th><th>Acc.</th></tr></thead> <tbody>${data.map(s=>`<tr> <td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td><strong>${s.noOrden}</strong></td> <td>${s.nombreModelo}</td><td>${s.nombreCliente}</td> <td>${badge(s.muestra)}</td><td>${badge(s.moldes)}</td> <td> <button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i> Formato</button> <button class=\"btn btn-info btn-sm btn-icon\" title=\"Expediente\" onclick=\"abrirExpediente('${s.noOrden}')\"><i class=\"fas fa-folder-open\"></i></button> </td> </tr>`).join('')}</tbody> </table></div>`} </div>`; }); } function verFormato(idSalida){
+function renderVerSalidas(){
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getSalidas').then(function(data){
+    var rows = !data.length
+      ? '<div class="empty-state"><i class="fas fa-truck-fast"></i><p>Sin salidas registradas</p></div>'
+      : '<div class="table-wrap"><table class="table"><thead><tr>'
+          +'<th>Fecha</th><th>NoOrden</th><th>Modelo</th><th>Cliente</th><th>Maquila</th>'
+          +'<th>Total Pz</th><th>Muestra</th><th>Moldes</th><th>Acc.</th>'
+        +'</tr></thead><tbody>'
+        + data.map(function(s){
+            return '<tr>'
+              +'<td>'+fmt(s.fecha)+'</td>'
+              +'<td><strong>'+s.noOrden+'</strong></td>'
+              +'<td>'+s.nombreModelo+'</td>'
+              +'<td>'+s.nombreCliente+'</td>'
+              +'<td>'+s.nombreMaquila+'</td>'
+              +'<td style="font-weight:700;color:var(--primary)">'+(s.totalSueteres||0)+'</td>'
+              +'<td>'+badge(s.muestra)+'</td>'
+              +'<td>'+badge(s.moldes)+'</td>'
+              +'<td style="white-space:nowrap">'
+                +'<button class="btn btn-info btn-sm btn-icon" onclick="verDetalleSalida(\''+s.id+'\',\''+s.noOrden+'\')" title="Ver detalle"><i class="fas fa-eye"></i></button> '
+                +'<button class="btn btn-danger btn-sm btn-icon" onclick="eliminarSalida(\''+s.id+'\',this)" title="Eliminar"><i class="fas fa-trash"></i></button>'
+              +'</td>'
+            +'</tr>';
+          }).join('')
+        +'</tbody></table></div>';
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div><h1>Ver Salidas</h1></div>'
+        +'<button class="btn btn-primary" onclick="navigate(\'salidas\')"><i class="fas fa-plus"></i> Nueva Salida</button>'
+      +'</div>'
+      +'<div class="card">'+rows+'</div>';
+  });
+}
+
+function verDetalleSalida(id, noOrden){
+  call('getFormatoSalida', id).then(function(f){
+    if(!f){toast('No se encontró el registro','danger');return;}
+    var s = f.salida;
+    var lineas = f.detalle || [];
+    var total = lineas.reduce(function(acc,l){return acc+(Number(l.total)||0);},0);
+
+    var detalleRows = lineas.map(function(l){
+      return '<tr>'
+        +'<td style="padding:7px 12px;font-weight:600">'+l.talla+'</td>'
+        +'<td style="padding:7px 12px;text-align:center">'+l.bultos+'</td>'
+        +'<td style="padding:7px 12px;text-align:center">'+l.pzBolsa+'</td>'
+        +'<td style="padding:7px 12px;text-align:center">'+(l.cuello||'—')+'</td>'
+        +'<td style="padding:7px 12px;text-align:center;font-weight:700;color:var(--primary)">'+l.total+'</td>'
+        +'</tr>';
+    }).join('');
+
+    var html =
+      '<div style="font-size:13px">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">'
+        +'<div><span style="color:var(--text-muted)">Fecha:</span> <strong>'+fmt(s.fecha)+'</strong></div>'
+        +'<div><span style="color:var(--text-muted)">No. Orden:</span> <strong style="color:var(--primary)">'+s.noOrden+'</strong></div>'
+        +'<div><span style="color:var(--text-muted)">Modelo:</span> '+s.modelo+'</div>'
+        +'<div><span style="color:var(--text-muted)">Cliente:</span> '+s.cliente+'</div>'
+        +'<div><span style="color:var(--text-muted)">Maquila:</span> '+s.maquila+'</div>'
+        +'<div><span style="color:var(--text-muted)">F. Entrega:</span> '+fmt(s.caducidad)+'</div>'
+      +'</div>'
+      +'<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'
+        +'<thead><tr style="background:var(--surface-2)">'
+          +'<th style="padding:8px 12px;text-align:left">Talla</th>'
+          +'<th style="padding:8px 12px;text-align:center">Bultos</th>'
+          +'<th style="padding:8px 12px;text-align:center">Pz/Bulto</th>'
+          +'<th style="padding:8px 12px;text-align:center">Cuellos</th>'
+          +'<th style="padding:8px 12px;text-align:center">Total Pz</th>'
+        +'</tr></thead>'
+        +'<tbody>'+detalleRows+'</tbody>'
+        +'<tfoot><tr style="border-top:2px solid var(--border)">'
+          +'<td colspan="4" style="padding:10px 12px;text-align:right;font-weight:700">TOTAL</td>'
+          +'<td style="padding:10px 12px;text-align:center;font-weight:700;color:var(--primary);font-size:16px">'+total+'</td>'
+        +'</tr></tfoot>'
+      +'</table>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;font-size:12px;padding:12px;background:var(--surface-2);border-radius:8px">'
+        +'<div><span style="color:var(--text-muted)">Tapa Costura:</span> '+(s.tapaCostura||0)+' m</div>'
+        +'<div><span style="color:var(--text-muted)">Hilo:</span> '+(s.hilo||0)+' kg</div>'
+        +'<div><span style="color:var(--text-muted)">Muestra:</span> '+(s.muestra||'NO')+'</div>'
+        +'<div><span style="color:var(--text-muted)">Moldes:</span> '+(s.moldes||'NO')+'</div>'
+      +'</div>'
+      +'</div>';
+
+    // Create or reuse modal
+    var modal = document.getElementById('salidaDetalleModal');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'salidaDetalleModal';
+      modal.className = 'modal-overlay';
+      modal.style.zIndex = '9999';
+      modal.innerHTML =
+        '<div class="modal" style="max-width:560px;width:92%">'
+          +'<div class="modal-header">'
+            +'<div class="modal-title">Detalle de Salida — '+noOrden+'</div>'
+            +'<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'salidaDetalleModal\').classList.remove(\'open\')"><i class="fas fa-times"></i></button>'
+          +'</div>'
+          +'<div class="modal-body" id="salidaDetalleBody" style="padding:16px;max-height:75vh;overflow-y:auto"></div>'
+        +'</div>';
+      modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('open'); });
+      document.body.appendChild(modal);
+    }
+    document.getElementById('salidaDetalleBody').innerHTML = html;
+    document.getElementById('salidaDetalleModal').classList.add('open');
+  }).catch(function(e){ toast('Error: '+e.message,'danger'); });
+}
+
+function eliminarSalida(id, btn){
+  if(!confirm('¿Eliminar esta salida? Esta acción no se puede deshacer.')) return;
+  if(btn){ btn.disabled=true; btn.innerHTML='<div class="spinner" style="width:12px;height:12px;border-width:2px"></div>'; }
+  call('eliminarSalida', id).then(function(){
+    toast('Salida eliminada','warning');
+    renderVerSalidas();
+  }).catch(function(e){
+    toast(e.message,'danger');
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-trash"></i>'; }
+  });
+}
+
+ function verFormato(idSalida){
   document.getElementById('formatoContent').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   openModal('modalFormato');
   call('getFormatoSalida', idSalida).then(function(f){
