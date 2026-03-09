@@ -916,8 +916,7 @@ function cargarStatsPeriodo(periodo){
 }
 
 function iniciarSesionGoogle(){
-  var overlay = document.getElementById('loginOverlay');
-  var btn     = document.getElementById('loginBtn');
+  var btn    = document.getElementById('loginBtn');
   var loading = document.getElementById('loginLoading');
   var errBox  = document.getElementById('loginError');
 
@@ -925,21 +924,44 @@ function iniciarSesionGoogle(){
   btn.style.display     = 'none';
   loading.style.display = 'flex';
 
+  // Obtener URL del script para construir el link de selector de cuentas
+  call('getScriptUrl').then(function(scriptUrl){
+    // Forzar selector de cuentas de Google
+    // Abre en la misma ventana: Google muestra picker, luego regresa al script con la cuenta elegida
+    var accountChooserUrl = 'https://accounts.google.com/AccountChooser'
+      + '?continue=' + encodeURIComponent(scriptUrl)
+      + '&hl=es';
+    window.location.href = accountChooserUrl;
+  }).catch(function(){
+    // Si falla obtener URL, intentar verificar con la sesión actual
+    _verificarAccesoActual(btn, loading, errBox);
+  });
+}
+
+function _verificarAccesoActual(btn, loading, errBox){
+  if(!loading) loading = document.getElementById('loginLoading');
+  if(!btn)     btn     = document.getElementById('loginBtn');
+  if(!errBox)  errBox  = document.getElementById('loginError');
+
+  loading.style.display = 'flex';
+  btn.style.display     = 'none';
+
   call('getUsuarioActual').then(function(user){
     loading.style.display = 'none';
 
     if(!user || user.acceso === false){
-      // Mostrar error en la pantalla de login
-      errBox.innerHTML = '<strong>Acceso denegado</strong><br>'
-        + (user && user.motivo ? user.motivo : 'Tu cuenta no está autorizada.')
-        + (user && user.correo ? '<br><span style="opacity:.7;font-size:11px">'+user.correo+'</span>' : '');
+      errBox.innerHTML =
+        '<strong>Acceso denegado</strong><br>'
+        + (user && user.motivo ? user.motivo : 'Tu cuenta no está registrada en el sistema.')
+        + (user && user.correo
+            ? '<br><span style="opacity:.7;font-size:11px;margin-top:4px;display:block">Cuenta: '+user.correo+'</span>'
+            : '');
       errBox.style.display = 'block';
       btn.style.display    = 'flex';
       return;
     }
 
-    // Acceso OK — ocultar overlay y cargar sistema
-    overlay.style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'none';
     _cargarSistema(user);
   }).catch(function(err){
     loading.style.display = 'none';
@@ -982,11 +1004,9 @@ function _cargarSistema(user){
 window.addEventListener('DOMContentLoaded',function(){
   if(isDark) document.getElementById('darkIcon').className='fas fa-sun';
 
-  // Mostrar overlay de login siempre al inicio
   var overlay = document.getElementById('loginOverlay');
-  overlay.style.display = 'flex';
 
-  // Cargar branding en el login mientras espera
+  // Cargar branding del login
   call('getConfig').then(function(cfg){
     if(!cfg) return;
     var ln = document.getElementById('loginName');
@@ -998,6 +1018,29 @@ window.addEventListener('DOMContentLoaded',function(){
       li.innerHTML = '<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:14px">';
     }
   }).catch(function(){});
+
+  // Verificar si ya hay sesión activa de Google (regresó del AccountChooser o ya estaba logueado)
+  // Si hay sesión válida, entrar directo. Si no, mostrar login.
+  call('getUsuarioActual').then(function(user){
+    if(user && user.acceso === true){
+      // Ya hay sesión válida — entrar directo sin mostrar login
+      overlay.style.display = 'none';
+      _cargarSistema(user);
+    } else {
+      // No hay sesión o no tiene acceso — mostrar pantalla de login
+      overlay.style.display = 'flex';
+      // Si hay error de acceso (no de sesión), mostrarlo ya
+      if(user && user.acceso === false && user.motivo){
+        var errBox = document.getElementById('loginError');
+        errBox.innerHTML = '<strong>Acceso denegado</strong><br>'+user.motivo
+          +(user.correo ? '<br><span style="opacity:.7;font-size:11px">'+user.correo+'</span>' : '');
+        errBox.style.display = 'block';
+      }
+    }
+  }).catch(function(){
+    // Error de red — mostrar login de todas formas
+    overlay.style.display = 'flex';
+  });
 });
 
 function verFormato(idSalida){
