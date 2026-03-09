@@ -445,6 +445,7 @@ function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML
 function renderVerSalidas(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   call('getSalidas').then(function(data){
+    data = data || [];
     var rows = !data.length
       ? '<div class="empty-state"><i class="fas fa-truck-fast"></i><p>Sin salidas registradas</p></div>'
       : '<div class="table-wrap"><table class="table"><thead><tr>'
