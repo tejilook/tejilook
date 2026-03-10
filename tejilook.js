@@ -703,13 +703,13 @@ function renderUsuarios(){
     var tblHtml = !data.length
       ? '<div class="empty-state"><i class="fas fa-users"></i><p>Sin usuarios</p></div>'
       : '<div class="table-wrap"><table class="table"><thead><tr>'
-          +'<th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acc.</th>'
+          +'<th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acc.</th>'
         +'</tr></thead><tbody>'
         + data.map(function(u){
             var uid = u.id;
             return '<tr>'
               +'<td><strong>'+u.nombre+'</strong></td>'
-              +'<td style="font-size:12px">'+u.correo+'</td>'
+              +'<td style="font-family:monospace;font-size:13px">'+u.usuario+'</td>'
               +'<td>'+badge(u.rol)+'</td>'
               +'<td>'+badge(u.activo)+'</td>'
               +'<td style="white-space:nowrap">'
@@ -726,18 +726,19 @@ function renderUsuarios(){
       +'<div class="dual-grid">'
         +'<div class="card">'
           +'<div class="card-title" style="margin-bottom:16px">Nuevo Usuario</div>'
-          +'<input type="hidden" id="usrId">'
-          +'<div class="form-group"><label class="form-label">Nombre</label>'
-            +'<input class="form-control" id="usrNombre" placeholder="Nombre completo"></div>'
-          +'<div class="form-group"><label class="form-label">Correo Google *</label>'
-            +'<input class="form-control" id="usrCorreo" type="email" placeholder="usuario@gmail.com"></div>'
+          +'<div class="form-group"><label class="form-label">Nombre completo</label>'
+            +'<input class="form-control" id="usrNombre" placeholder="Ej: Ana Lopez"></div>'
+          +'<div class="form-group"><label class="form-label">Usuario *</label>'
+            +'<input class="form-control" id="usrUsuario" placeholder="Ej: ana.lopez" autocomplete="off"></div>'
+          +'<div class="form-group"><label class="form-label">Contrasena *</label>'
+            +'<input class="form-control" id="usrPassword" type="password" placeholder="Minimo 4 caracteres" autocomplete="new-password"></div>'
           +'<div class="form-group"><label class="form-label">Rol</label>'
             +'<select class="form-control form-select" id="usrRol">'
               +'<option value="Administrador">Administrador</option>'
               +'<option value="Superusuario">Superusuario</option>'
             +'</select></div>'
           +'<button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">'
-            +'<i class="fas fa-save"></i> Guardar</button>'
+            +'<i class="fas fa-save"></i> Crear Usuario</button>'
         +'</div>'
         +'<div class="card">'
           +'<div class="card-title" style="margin-bottom:16px">Usuarios Registrados</div>'
@@ -748,15 +749,19 @@ function renderUsuarios(){
 }
 
 function guardarUsuario(){
-  var correo = document.getElementById('usrCorreo').value.trim();
-  if(!correo){ toast('Correo requerido','danger'); return; }
-  call('crearUsuario',{
-    id:     document.getElementById('usrId').value,
-    nombre: document.getElementById('usrNombre').value,
-    correo: correo,
-    rol:    document.getElementById('usrRol').value
-  }).then(function(){ toast('Usuario guardado ✓'); renderUsuarios(); })
-    .catch(function(err){ toast(err.message,'danger'); });
+  var nombre   = document.getElementById('usrNombre').value.trim();
+  var usuario  = document.getElementById('usrUsuario').value.trim();
+  var password = document.getElementById('usrPassword').value.trim();
+  var rol      = document.getElementById('usrRol').value;
+  if(!usuario){ toast('El usuario es requerido','danger'); return; }
+  if(!password||password.length<4){ toast('La contrasena debe tener al menos 4 caracteres','danger'); return; }
+  call('crearUsuario',{nombre:nombre||usuario,usuario:usuario,password:password,rol:rol})
+    .then(function(r){
+      if(!r||!r.ok){ toast((r&&r.msg)||'Error al crear usuario','danger'); return; }
+      toast('Usuario creado ✓');
+      ['usrNombre','usrUsuario','usrPassword'].forEach(function(id){ document.getElementById(id).value=''; });
+      renderUsuarios();
+    }).catch(function(err){ toast(err.message,'danger'); });
 }
 
 function renderBitacora(){
@@ -915,61 +920,44 @@ function cargarStatsPeriodo(periodo){
   }).catch(function(){el.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">No disponible</p>';});
 }
 
-function iniciarSesionGoogle(){
-  var btn    = document.getElementById('loginBtn');
-  var loading = document.getElementById('loginLoading');
-  var errBox  = document.getElementById('loginError');
+function iniciarSesion(){
+  var usuario  = (document.getElementById('loginUsuario').value || '').trim();
+  var password = (document.getElementById('loginPassword').value || '').trim();
+  var errBox   = document.getElementById('loginError');
+  var btn      = document.getElementById('loginBtn');
+  var loading  = document.getElementById('loginLoading');
 
-  errBox.style.display  = 'none';
+  errBox.style.display = 'none';
+  if(!usuario || !password){
+    errBox.innerHTML = 'Ingresa tu usuario y contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+
   btn.style.display     = 'none';
   loading.style.display = 'flex';
 
-  // Obtener URL del script para construir el link de selector de cuentas
-  call('getScriptUrl').then(function(scriptUrl){
-    // Forzar selector de cuentas de Google
-    // Abre en la misma ventana: Google muestra picker, luego regresa al script con la cuenta elegida
-    var accountChooserUrl = 'https://accounts.google.com/AccountChooser'
-      + '?continue=' + encodeURIComponent(scriptUrl)
-      + '&hl=es';
-    window.location.href = accountChooserUrl;
-  }).catch(function(){
-    // Si falla obtener URL, intentar verificar con la sesión actual
-    _verificarAccesoActual(btn, loading, errBox);
-  });
-}
-
-function _verificarAccesoActual(btn, loading, errBox){
-  if(!loading) loading = document.getElementById('loginLoading');
-  if(!btn)     btn     = document.getElementById('loginBtn');
-  if(!errBox)  errBox  = document.getElementById('loginError');
-
-  loading.style.display = 'flex';
-  btn.style.display     = 'none';
-
-  call('getUsuarioActual').then(function(user){
+  call('loginUsuario', usuario, password).then(function(res){
     loading.style.display = 'none';
-
-    if(!user || user.acceso === false){
-      errBox.innerHTML =
-        '<strong>Acceso denegado</strong><br>'
-        + (user && user.motivo ? user.motivo : 'Tu cuenta no está registrada en el sistema.')
-        + (user && user.correo
-            ? '<br><span style="opacity:.7;font-size:11px;margin-top:4px;display:block">Cuenta: '+user.correo+'</span>'
-            : '');
+    if(!res || !res.ok){
+      errBox.innerHTML = res && res.msg ? res.msg : 'Credenciales incorrectas.';
       errBox.style.display = 'block';
       btn.style.display    = 'flex';
+      // Limpiar solo el campo de contraseña
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginPassword').focus();
       return;
     }
-
     document.getElementById('loginOverlay').style.display = 'none';
-    _cargarSistema(user);
+    _cargarSistema(res);
   }).catch(function(err){
     loading.style.display = 'none';
-    errBox.innerHTML = 'Error de conexión: ' + err.message;
+    errBox.innerHTML = 'Error de conexión: ' + (err.message || err);
     errBox.style.display = 'block';
     btn.style.display    = 'flex';
   });
 }
+
 
 function _cargarSistema(user){
   currentUser = user;
@@ -1003,45 +991,161 @@ function _cargarSistema(user){
 
 window.addEventListener('DOMContentLoaded',function(){
   if(isDark) document.getElementById('darkIcon').className='fas fa-sun';
+  // Check session storage for logged-in user
+  var stored = null;
+  try { stored = JSON.parse(sessionStorage.getItem('tejilook_user')); } catch(e){}
+  if(stored && stored.id){
+    _initApp(stored);
+  } else {
+    _showLogin();
+  }
+});
 
-  var overlay = document.getElementById('loginOverlay');
-
-  // Cargar branding del login
+function _showLogin(){
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('topbar').style.display='none';
+  document.getElementById('main').style.cssText='margin:0;padding:0;min-height:100vh';
+  document.getElementById('main').innerHTML=`
+    <div id="loginWrap" style="min-height:100vh;display:flex;align-items:stretch;font-family:'DM Sans',sans-serif">
+      <!-- Panel izquierdo: fondo con gradiente geométrico -->
+      <div style="flex:1;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 40%,#0891b2 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh">
+        <!-- Formas geométricas decorativas -->
+        <div style="position:absolute;top:-80px;right:-80px;width:340px;height:340px;background:rgba(6,182,212,.18);border-radius:50%;filter:blur(60px)"></div>
+        <div style="position:absolute;bottom:-60px;left:-60px;width:280px;height:280px;background:rgba(245,158,11,.12);border-radius:50%;filter:blur(50px)"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:420px;height:420px;border:1px solid rgba(255,255,255,.06);border-radius:50%"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;border:1px solid rgba(255,255,255,.08);border-radius:50%"></div>
+        <!-- Texto decorativo izquierdo -->
+        <div style="position:relative;z-index:1;text-align:center;padding:40px">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:56px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1">Teji<span style="color:#f59e0b">Look</span></div>
+          <div style="color:rgba(255,255,255,.5);font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-top:12px">Sistema de Control</div>
+          <div style="margin-top:48px;display:flex;flex-direction:column;gap:16px">
+            ${['Clientes','Modelos','Producción','Embolsado','Salidas'].map(item=>`
+              <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.4);font-size:13px">
+                <div style="width:6px;height:6px;background:rgba(245,158,11,.6);border-radius:50%"></div>${item}
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <!-- Panel derecho: formulario -->
+      <div style="width:420px;background:var(--surface);display:flex;align-items:center;justify-content:center;padding:48px 40px;flex-shrink:0">
+        <div style="width:100%;max-width:320px">
+          <!-- Logo -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:40px">
+            <div id="loginLogoBox" style="width:44px;height:44px;background:var(--primary);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;font-size:16px;overflow:hidden">TJ</div>
+            <div>
+              <div id="loginSisNombre" style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--text)">TejiLook</div>
+              <div id="loginSisSub" style="font-size:11px;color:var(--text-muted);letter-spacing:.5px">Sistema de Control</div>
+            </div>
+          </div>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px">Iniciar sesión</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:32px">Ingresa tus credenciales para continuar</p>
+          <!-- Form -->
+          <div class="form-group">
+            <label class="form-label">Usuario</label>
+            <div style="position:relative">
+              <i class="fas fa-user" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:13px"></i>
+              <input class="form-control" id="loginUser" placeholder="Tu usuario" autocomplete="username"
+                style="padding-left:36px" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:24px">
+            <label class="form-label">Contraseña</label>
+            <div style="position:relative">
+              <i class="fas fa-lock" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:13px"></i>
+              <input class="form-control" id="loginPass" type="password" placeholder="Tu contraseña" autocomplete="current-password"
+                style="padding-left:36px;padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
+              <button onclick="toggleLoginPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:4px" id="togglePassBtn"><i class="fas fa-eye" id="togglePassIcon"></i></button>
+            </div>
+          </div>
+          <div id="loginError" style="display:none;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px"></div>
+          <button onclick="doLogin()" id="loginBtn" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;justify-content:center;letter-spacing:.3px">
+            <i class="fas fa-arrow-right-to-bracket"></i> Iniciar Sesión
+          </button>
+        </div>
+      </div>
+    </div>`;
+  // Load config for branding
   call('getConfig').then(function(cfg){
     if(!cfg) return;
-    var ln = document.getElementById('loginName');
-    var ls = document.getElementById('loginSub');
-    var li = document.getElementById('loginLogo');
-    if(ln && cfg.sistNombre) ln.textContent = cfg.sistNombre;
-    if(ls && cfg.sistSub)    ls.textContent = cfg.sistSub;
-    if(li && cfg.sistLogoUrl){
-      li.innerHTML = '<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:14px">';
+    var nom = document.getElementById('loginSisNombre');
+    var sub = document.getElementById('loginSisSub');
+    var box = document.getElementById('loginLogoBox');
+    if(nom && cfg.sistNombre) nom.textContent = cfg.sistNombre;
+    if(sub && cfg.sistSub)    sub.textContent = cfg.sistSub;
+    if(box && cfg.sistLogoUrl){
+      box.style.background='transparent';
+      box.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">';
     }
   }).catch(function(){});
+  setTimeout(function(){ var u=document.getElementById('loginUser'); if(u) u.focus(); },100);
+}
 
-  // Verificar si ya hay sesión activa de Google (regresó del AccountChooser o ya estaba logueado)
-  // Si hay sesión válida, entrar directo. Si no, mostrar login.
-  call('getUsuarioActual').then(function(user){
-    if(user && user.acceso === true){
-      // Ya hay sesión válida — entrar directo sin mostrar login
-      overlay.style.display = 'none';
-      _cargarSistema(user);
-    } else {
-      // No hay sesión o no tiene acceso — mostrar pantalla de login
-      overlay.style.display = 'flex';
-      // Si hay error de acceso (no de sesión), mostrarlo ya
-      if(user && user.acceso === false && user.motivo){
-        var errBox = document.getElementById('loginError');
-        errBox.innerHTML = '<strong>Acceso denegado</strong><br>'+user.motivo
-          +(user.correo ? '<br><span style="opacity:.7;font-size:11px">'+user.correo+'</span>' : '');
-        errBox.style.display = 'block';
-      }
+function toggleLoginPass(){
+  var inp  = document.getElementById('loginPass');
+  var icon = document.getElementById('togglePassIcon');
+  if(!inp) return;
+  if(inp.type==='password'){ inp.type='text'; icon.className='fas fa-eye-slash'; }
+  else { inp.type='password'; icon.className='fas fa-eye'; }
+}
+
+function doLogin(){
+  var usuario  = (document.getElementById('loginUser').value  || '').trim();
+  var password = (document.getElementById('loginPass').value  || '').trim();
+  var errEl    = document.getElementById('loginError');
+  var btn      = document.getElementById('loginBtn');
+  if(!usuario || !password){
+    errEl.textContent='Ingresa usuario y contraseña.';
+    errEl.style.display='block'; return;
+  }
+  errEl.style.display='none';
+  btn.disabled=true;
+  btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px;border-top-color:#fff"></div> Verificando...';
+  call('loginUsuario',{usuario:usuario,password:password}).then(function(r){
+    if(!r || !r.ok){
+      errEl.textContent = r ? r.msg : 'Error de conexión.';
+      errEl.style.display='block';
+      btn.disabled=false;
+      btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Iniciar Sesión';
+      return;
     }
-  }).catch(function(){
-    // Error de red — mostrar login de todas formas
-    overlay.style.display = 'flex';
+    try { sessionStorage.setItem('tejilook_user', JSON.stringify(r)); } catch(e){}
+    _initApp(r);
+  }).catch(function(e){
+    errEl.textContent='Error: '+e.message;
+    errEl.style.display='block';
+    btn.disabled=false;
+    btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Iniciar Sesión';
   });
-});
+}
+
+function doLogout(){
+  try { sessionStorage.removeItem('tejilook_user'); } catch(e){}
+  currentUser = null;
+  _showLogin();
+}
+
+function _initApp(user){
+  currentUser = user;
+  document.getElementById('sidebar').style.display='';
+  document.getElementById('topbar').style.display='';
+  document.getElementById('main').style.cssText='';
+  document.getElementById('userName').textContent  = user.nombre;
+  document.getElementById('userRole').textContent   = user.rol;
+  document.getElementById('userAvatar').textContent = user.nombre.charAt(0).toUpperCase();
+  var isSu = user.rol === 'Superusuario';
+  document.querySelectorAll('.nav-sistema').forEach(function(el){ el.style.display = isSu ? '' : 'none'; });
+  call('getConfig').then(function(cfg){
+    window._sysConfig=cfg;
+    var bn=document.querySelector('.brand-text .name');
+    var bs=document.querySelector('.brand-text .sub');
+    var bi=document.querySelector('.brand-icon');
+    if(bn&&cfg.sistNombre) bn.textContent=cfg.sistNombre;
+    if(bs&&cfg.sistSub)    bs.textContent=cfg.sistSub;
+    if(bi&&cfg.sistLogoUrl){ bi.style.background='transparent'; bi.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">'; }
+  }).catch(function(){});
+  var initView=window.location.hash?window.location.hash.replace('#',''):'dashboard';
+  navigate(initView||'dashboard');
+};
 
 function verFormato(idSalida){
   document.getElementById('formatoContent').innerHTML='<div class="loading"><div class="spinner"></div></div>';
