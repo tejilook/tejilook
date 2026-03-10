@@ -1006,133 +1006,102 @@ function _showLogin(){
   document.getElementById('topbar').style.display='none';
   document.getElementById('main').style.cssText='margin:0;padding:0;min-height:100vh';
   document.getElementById('main').innerHTML=`
-    <div id="loginWrap" style="
+    <div style="
       min-height:100vh;
-      display:flex;
-      align-items:stretch;
-      font-family:'DM Sans',sans-serif;
-      background:#0b0f1a;
+      background:url('https://drive.google.com/thumbnail?id=1qMi20i3-avWmKa0IgV4ufu4hNdYfmYDx&sz=w1600') center/cover no-repeat;
       position:relative;
+      display:flex;
+      align-items:center;
+      font-family:'DM Sans',sans-serif;
       overflow:hidden;
     ">
-      <!-- FONDO: imagen completa -->
-      <div style="
-        position:absolute;inset:0;
-        background:url('https://drive.google.com/thumbnail?id=1prQ4-W74YkKjHoI1exMPTq-1pIPRDJCM&sz=w1600') center/cover no-repeat;
-        z-index:0;
-      "></div>
-      <!-- Overlay oscuro lado derecho para legibilidad -->
+      <!-- Overlay suave solo sobre el area del card -->
       <div style="
         position:absolute;inset:0;
         background:linear-gradient(to right,
-          rgba(0,0,0,0) 0%,
-          rgba(0,0,0,0) 42%,
-          rgba(11,15,26,0.55) 58%,
-          rgba(11,15,26,0.92) 72%,
-          rgba(11,15,26,0.97) 100%);
-        z-index:1;
+          rgba(0,0,0,0.18) 0%,
+          rgba(0,0,0,0.10) 38%,
+          rgba(0,0,0,0.04) 100%);
+        z-index:0;
       "></div>
 
-      <!-- Spacer izquierdo -->
-      <div style="flex:1;position:relative;z-index:2"></div>
-
-      <!-- Card glassmorphism -->
+      <!-- Card — posicionado al lado izquierdo de la modelo (~35% del ancho) -->
       <div style="
-        position:relative;z-index:2;
-        width:400px;flex-shrink:0;
-        display:flex;align-items:center;justify-content:center;
-        padding:48px 44px;
+        position:relative;z-index:1;
+        margin-left:6%;
+        width:340px;
       ">
         <div style="
-          width:100%;
-          background:rgba(255,255,255,0.10);
-          backdrop-filter:blur(24px);
-          -webkit-backdrop-filter:blur(24px);
-          border:1px solid rgba(255,255,255,0.18);
+          background:rgba(255,255,255,0.13);
+          backdrop-filter:blur(28px);
+          -webkit-backdrop-filter:blur(28px);
+          border:1px solid rgba(255,255,255,0.22);
           border-radius:24px;
           padding:44px 36px;
-          box-shadow:0 24px 64px rgba(0,0,0,0.45);
+          box-shadow:0 20px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.25);
         ">
-          <!-- Logo -->
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:36px">
+          <!-- Logo + nombre -->
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:32px">
             <div id="loginLogoBox" style="
-              width:42px;height:42px;
+              width:40px;height:40px;flex-shrink:0;
               background:linear-gradient(135deg,#7c3aed,#ec4899);
-              border-radius:12px;
+              border-radius:11px;
               display:flex;align-items:center;justify-content:center;
-              overflow:hidden;flex-shrink:0;
+              overflow:hidden;
             ">
-              <!-- Cruz / X estilizada igual al mockup -->
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" fill="white" opacity="0.9"/>
-                <rect x="11" y="2" width="2" height="8" rx="1" fill="white" opacity="0.7"/>
-                <rect x="11" y="14" width="2" height="8" rx="1" fill="white" opacity="0.7"/>
-                <rect x="2" y="11" width="8" height="2" rx="1" fill="white" opacity="0.7"/>
-                <rect x="14" y="11" width="8" height="2" rx="1" fill="white" opacity="0.7"/>
-                <rect x="4.5" y="4.5" width="2" height="6" rx="1" fill="white" opacity="0.4" transform="rotate(45 5.5 7.5)"/>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" fill="white" opacity="0.95"/>
+                <rect x="11" y="2"  width="2" height="7" rx="1" fill="white" opacity="0.75"/>
+                <rect x="11" y="15" width="2" height="7" rx="1" fill="white" opacity="0.75"/>
+                <rect x="2"  y="11" width="7" height="2" rx="1" fill="white" opacity="0.75"/>
+                <rect x="15" y="11" width="7" height="2" rx="1" fill="white" opacity="0.75"/>
               </svg>
             </div>
-            <div>
-              <div id="loginSisNombre" style="
-                font-family:'Space Grotesk',sans-serif;
-                font-weight:700;font-size:22px;
-                color:#fff;letter-spacing:-0.5px;line-height:1;
-              ">TejiLook</div>
-            </div>
+            <div id="loginSisNombre" style="
+              font-family:'Space Grotesk',sans-serif;
+              font-weight:700;font-size:22px;
+              color:#fff;letter-spacing:-0.4px;line-height:1;
+            ">TejiLook</div>
           </div>
 
-          <!-- Campos -->
-          <div style="margin-bottom:22px">
-            <div style="
-              font-size:12px;color:rgba(255,255,255,0.6);
-              font-weight:500;margin-bottom:8px;letter-spacing:0.3px;
-            ">Usuario</div>
-            <div style="position:relative">
-              <i class="fas fa-user" style="
-                position:absolute;left:0;top:50%;transform:translateY(-50%);
-                color:rgba(255,255,255,0.4);font-size:14px;
-              "></i>
+          <!-- Campo Usuario -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:9px">Usuario</div>
+            <div style="position:relative;display:flex;align-items:center">
+              <i class="fas fa-user" style="position:absolute;left:0;color:rgba(255,255,255,0.38);font-size:13px;pointer-events:none"></i>
               <input id="loginUser" autocomplete="username"
                 style="
                   width:100%;background:transparent;border:none;
-                  border-bottom:1.5px solid rgba(255,255,255,0.3);
-                  padding:8px 8px 8px 24px;
+                  border-bottom:1.5px solid rgba(255,255,255,0.28);
+                  padding:7px 4px 7px 22px;
                   color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;
                   outline:none;transition:border-color .2s;
                 "
-                placeholder=""
-                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.85)'"
-                onblur="this.style.borderBottomColor='rgba(255,255,255,0.3)'"
+                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.9)'"
+                onblur="this.style.borderBottomColor='rgba(255,255,255,0.28)'"
                 onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
             </div>
           </div>
 
-          <div style="margin-bottom:28px">
-            <div style="
-              font-size:12px;color:rgba(255,255,255,0.6);
-              font-weight:500;margin-bottom:8px;letter-spacing:0.3px;
-            ">Contraseña</div>
-            <div style="position:relative">
-              <i class="fas fa-lock" id="lockIcon" style="
-                position:absolute;left:0;top:50%;transform:translateY(-50%);
-                color:rgba(255,255,255,0.4);font-size:14px;
-              "></i>
+          <!-- Campo Contraseña -->
+          <div style="margin-bottom:26px">
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:9px">Contraseña</div>
+            <div style="position:relative;display:flex;align-items:center">
+              <i class="fas fa-lock" style="position:absolute;left:0;color:rgba(255,255,255,0.38);font-size:13px;pointer-events:none"></i>
               <input id="loginPass" type="password" autocomplete="current-password"
                 style="
                   width:100%;background:transparent;border:none;
-                  border-bottom:1.5px solid rgba(255,255,255,0.3);
-                  padding:8px 32px 8px 24px;
+                  border-bottom:1.5px solid rgba(255,255,255,0.28);
+                  padding:7px 28px 7px 22px;
                   color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;
                   outline:none;transition:border-color .2s;
                 "
-                placeholder=""
-                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.85)'"
-                onblur="this.style.borderBottomColor='rgba(255,255,255,0.3)'"
+                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.9)'"
+                onblur="this.style.borderBottomColor='rgba(255,255,255,0.28)'"
                 onkeydown="if(event.key==='Enter')doLogin()">
               <button onclick="toggleLoginPass()" style="
-                position:absolute;right:0;top:50%;transform:translateY(-50%);
-                background:none;border:none;cursor:pointer;
-                color:rgba(255,255,255,0.4);font-size:13px;padding:4px;
+                position:absolute;right:0;background:none;border:none;
+                cursor:pointer;color:rgba(255,255,255,0.38);font-size:12px;padding:4px;
               "><i class="fas fa-eye" id="togglePassIcon"></i></button>
             </div>
           </div>
@@ -1140,28 +1109,28 @@ function _showLogin(){
           <!-- Error -->
           <div id="loginError" style="
             display:none;
-            background:rgba(239,68,68,0.2);
-            border:1px solid rgba(239,68,68,0.4);
+            background:rgba(239,68,68,0.18);
+            border:1px solid rgba(239,68,68,0.35);
             color:#fca5a5;
-            padding:10px 14px;border-radius:10px;
-            font-size:12px;margin-bottom:16px;
+            padding:9px 13px;border-radius:10px;
+            font-size:12px;margin-bottom:14px;
           "></div>
 
           <!-- Botón -->
           <button onclick="doLogin()" id="loginBtn" style="
             width:100%;
-            background:linear-gradient(135deg,#1e40af,#2563eb);
+            background:linear-gradient(135deg,#1d4ed8,#2563eb);
             border:none;border-radius:50px;
-            color:#fff;font-family:'DM Sans',sans-serif;
-            font-size:15px;font-weight:600;
+            color:#fff;font-family:'Space Grotesk',sans-serif;
+            font-size:14px;font-weight:600;
             padding:13px;cursor:pointer;
-            display:flex;align-items:center;justify-content:center;gap:8px;
+            display:flex;align-items:center;justify-content:center;
             transition:all .2s;
-            box-shadow:0 8px 24px rgba(37,99,235,0.35);
-            letter-spacing:0.2px;
+            box-shadow:0 6px 20px rgba(37,99,235,0.4);
+            letter-spacing:0.3px;
           "
-          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.45)'"
-          onmouseout="this.style.transform='';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.35)'">
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 28px rgba(37,99,235,0.5)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(37,99,235,0.4)'">
             Iniciar Sesión
           </button>
         </div>
@@ -1179,7 +1148,6 @@ function _showLogin(){
   }).catch(function(){});
   setTimeout(function(){ var u=document.getElementById('loginUser'); if(u) u.focus(); },100);
 }
-
 function toggleLoginPass(){
   var inp  = document.getElementById('loginPass');
   var icon = document.getElementById('togglePassIcon');
