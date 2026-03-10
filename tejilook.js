@@ -37,33 +37,64 @@ function dashRender(d){
   var p   = d.porTrabajador || [];
   var pm  = d.porMaquila    || [];
   var pa  = d.porProceso    || {};
-  var totalPiezas = d.totalPiezas || 0;
   var labels = {semana:'Esta semana', mes:'Este mes', anio:'Este a\u00f1o'};
   var periodoLabel = labels[window._dashPeriodo] || '';
-  var topTrab = p.length ? p[0] : null;
-  var topMaq  = pm.length ? pm[0] : null;
   var procKeys = Object.keys(pa);
 
-  var html =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">'
-      +dashKpi('fas fa-layer-group','Piezas procesadas', totalPiezas, 'var(--primary)', periodoLabel)
-      +dashKpi('fas fa-users','Trabajadores activos', p.length, 'var(--success)', 'con producci\u00f3n')
-      +dashKpi('fas fa-trophy','Top trabajador', topTrab ? topTrab.nombre : '\u2014', 'var(--warning)', topTrab ? topTrab.piezas+' piezas' : '')
-      +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '\u2014', 'var(--info)', topMaq ? topMaq.sueteres+' su\u00e9teres enviados' : '')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
+  // Suéteres enviados a maquila (de SALIDAS — dato correcto y único)
+  var totalSueteresSalidas = pm.reduce(function(s,m){ return s + (m.sueteres||0); }, 0);
+
+  // Top trabajador general
+  var topGeneral = p.length ? p[0] : null;
+
+  // Top por área/proceso: de cada proceso, el trabajador con más piezas
+  var topPorArea = {};
+  p.forEach(function(t){
+    Object.keys(t.porProceso).forEach(function(proc){
+      var v = t.porProceso[proc];
+      if(!topPorArea[proc] || v > topPorArea[proc].piezas){
+        topPorArea[proc] = { nombre: t.nombre, piezas: v };
+      }
+    });
+  });
+
+  // Top maquila
+  var topMaq = pm.length ? pm[0] : null;
+
+  // ── KPIs ────────────────────────────────────────────────────────────────
+  var kpiHtml =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">'
+    // 1. Suéteres enviados a maquila
+    +dashKpi('fas fa-shirt','Su\u00e9teres procesados '+periodoLabel, totalSueteresSalidas, 'var(--primary)', 'Total enviados a maquila')
+    // 2. Top trabajador general
+    +dashKpi('fas fa-trophy','Top trabajador general', topGeneral ? topGeneral.nombre : '\u2014', 'var(--warning)', topGeneral ? topGeneral.piezas+' piezas' : '')
+    // 3. Top por área — uno por proceso
+    +Object.keys(topPorArea).map(function(proc){
+      var t = topPorArea[proc];
+      return dashKpi('fas fa-star','Top '+proc, t.nombre, 'var(--success)', t.piezas+' piezas');
+    }).join('')
+    // 4. Top maquila
+    +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '\u2014', 'var(--info)', topMaq ? topMaq.sueteres+' su\u00e9teres' : '')
+    +'</div>';
+
+  // ── Fila 1: barras trabajadores + espacio reservado (reposiciones) ────────
+  var fila1 =
+    '<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M por persona</div>'
         +'<div id="chartTrabajadores"></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Proceso</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+'</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 espacio para reposiciones</div>'
         +'<canvas id="chartProcesos" width="300" height="240"></canvas>'
       +'</div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
+    +'</div>';
+
+  // ── Fila 2: maquilas + tabla comparativa ────────────────────────────────
+  var fila2 =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
@@ -74,7 +105,7 @@ function dashRender(d){
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
         +'<div style="overflow-x:auto"><table class="table" style="font-size:12px">'
           +'<thead><tr><th>Trabajador</th>'
-          +procKeys.map(function(p){ return '<th style="text-align:center">'+p+'</th>'; }).join('')
+          +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
           +'<th style="text-align:right">Total</th></tr></thead><tbody>'
           +p.map(function(t){
             return '<tr><td><strong>'+t.nombre+'</strong></td>'
@@ -88,7 +119,8 @@ function dashRender(d){
       +'</div>'
     +'</div>';
 
-  document.getElementById('dashContent').innerHTML = html;
+  document.getElementById('dashContent').innerHTML = kpiHtml + fila1 + fila2;
+
   var colors = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
 
   // Barras trabajadores
@@ -125,9 +157,8 @@ function dashRender(d){
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
   // Dona procesos
-  var procLabels = procKeys;
-  var procVals   = procLabels.map(function(k){ return pa[k]; });
-  dashDrawDonut('chartProcesos', procLabels, procVals, colors);
+  var procVals = procKeys.map(function(k){ return pa[k]; });
+  dashDrawDonut('chartProcesos', procKeys, procVals, colors);
 }
 function dashKpi(icon, label, value, color, sub){
   return '<div class="card" style="padding:18px;display:flex;gap:14px;align-items:center">'
