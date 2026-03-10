@@ -1006,75 +1006,175 @@ function _showLogin(){
   document.getElementById('topbar').style.display='none';
   document.getElementById('main').style.cssText='margin:0;padding:0;min-height:100vh';
   document.getElementById('main').innerHTML=`
-    <div id="loginWrap" style="min-height:100vh;display:flex;align-items:stretch;font-family:'DM Sans',sans-serif">
-      <!-- Panel izquierdo: fondo con gradiente geométrico -->
-      <div style="flex:1;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 40%,#0891b2 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh">
-        <!-- Formas geométricas decorativas -->
-        <div style="position:absolute;top:-80px;right:-80px;width:340px;height:340px;background:rgba(6,182,212,.18);border-radius:50%;filter:blur(60px)"></div>
-        <div style="position:absolute;bottom:-60px;left:-60px;width:280px;height:280px;background:rgba(245,158,11,.12);border-radius:50%;filter:blur(50px)"></div>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:420px;height:420px;border:1px solid rgba(255,255,255,.06);border-radius:50%"></div>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;border:1px solid rgba(255,255,255,.08);border-radius:50%"></div>
-        <!-- Texto decorativo izquierdo -->
-        <div style="position:relative;z-index:1;text-align:center;padding:40px">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:56px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1">Teji<span style="color:#f59e0b">Look</span></div>
-          <div style="color:rgba(255,255,255,.5);font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-top:12px">Sistema de Control</div>
-          <div style="margin-top:48px;display:flex;flex-direction:column;gap:16px">
-            ${['Clientes','Modelos','Producción','Embolsado','Salidas'].map(item=>`
-              <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.4);font-size:13px">
-                <div style="width:6px;height:6px;background:rgba(245,158,11,.6);border-radius:50%"></div>${item}
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>
-      <!-- Panel derecho: formulario -->
-      <div style="width:420px;background:var(--surface);display:flex;align-items:center;justify-content:center;padding:48px 40px;flex-shrink:0">
-        <div style="width:100%;max-width:320px">
+    <div id="loginWrap" style="
+      min-height:100vh;
+      display:flex;
+      align-items:stretch;
+      font-family:'DM Sans',sans-serif;
+      background:#0b0f1a;
+      position:relative;
+      overflow:hidden;
+    ">
+      <!-- FONDO: imagen completa -->
+      <div style="
+        position:absolute;inset:0;
+        background:url('https://drive.google.com/thumbnail?id=1prQ4-W74YkKjHoI1exMPTq-1pIPRDJCM&sz=w1600') center/cover no-repeat;
+        z-index:0;
+      "></div>
+      <!-- Overlay oscuro lado derecho para legibilidad -->
+      <div style="
+        position:absolute;inset:0;
+        background:linear-gradient(to right,
+          rgba(0,0,0,0) 0%,
+          rgba(0,0,0,0) 42%,
+          rgba(11,15,26,0.55) 58%,
+          rgba(11,15,26,0.92) 72%,
+          rgba(11,15,26,0.97) 100%);
+        z-index:1;
+      "></div>
+
+      <!-- Spacer izquierdo -->
+      <div style="flex:1;position:relative;z-index:2"></div>
+
+      <!-- Card glassmorphism -->
+      <div style="
+        position:relative;z-index:2;
+        width:400px;flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;
+        padding:48px 44px;
+      ">
+        <div style="
+          width:100%;
+          background:rgba(255,255,255,0.10);
+          backdrop-filter:blur(24px);
+          -webkit-backdrop-filter:blur(24px);
+          border:1px solid rgba(255,255,255,0.18);
+          border-radius:24px;
+          padding:44px 36px;
+          box-shadow:0 24px 64px rgba(0,0,0,0.45);
+        ">
           <!-- Logo -->
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:40px">
-            <div id="loginLogoBox" style="width:44px;height:44px;background:var(--primary);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;font-size:16px;overflow:hidden">TJ</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:36px">
+            <div id="loginLogoBox" style="
+              width:42px;height:42px;
+              background:linear-gradient(135deg,#7c3aed,#ec4899);
+              border-radius:12px;
+              display:flex;align-items:center;justify-content:center;
+              overflow:hidden;flex-shrink:0;
+            ">
+              <!-- Cruz / X estilizada igual al mockup -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" fill="white" opacity="0.9"/>
+                <rect x="11" y="2" width="2" height="8" rx="1" fill="white" opacity="0.7"/>
+                <rect x="11" y="14" width="2" height="8" rx="1" fill="white" opacity="0.7"/>
+                <rect x="2" y="11" width="8" height="2" rx="1" fill="white" opacity="0.7"/>
+                <rect x="14" y="11" width="8" height="2" rx="1" fill="white" opacity="0.7"/>
+                <rect x="4.5" y="4.5" width="2" height="6" rx="1" fill="white" opacity="0.4" transform="rotate(45 5.5 7.5)"/>
+              </svg>
+            </div>
             <div>
-              <div id="loginSisNombre" style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:var(--text)">TejiLook</div>
-              <div id="loginSisSub" style="font-size:11px;color:var(--text-muted);letter-spacing:.5px">Sistema de Control</div>
+              <div id="loginSisNombre" style="
+                font-family:'Space Grotesk',sans-serif;
+                font-weight:700;font-size:22px;
+                color:#fff;letter-spacing:-0.5px;line-height:1;
+              ">TejiLook</div>
             </div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px">Iniciar sesión</h2>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:32px">Ingresa tus credenciales para continuar</p>
-          <!-- Form -->
-          <div class="form-group">
-            <label class="form-label">Usuario</label>
+
+          <!-- Campos -->
+          <div style="margin-bottom:22px">
+            <div style="
+              font-size:12px;color:rgba(255,255,255,0.6);
+              font-weight:500;margin-bottom:8px;letter-spacing:0.3px;
+            ">Usuario</div>
             <div style="position:relative">
-              <i class="fas fa-user" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:13px"></i>
-              <input class="form-control" id="loginUser" placeholder="Tu usuario" autocomplete="username"
-                style="padding-left:36px" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+              <i class="fas fa-user" style="
+                position:absolute;left:0;top:50%;transform:translateY(-50%);
+                color:rgba(255,255,255,0.4);font-size:14px;
+              "></i>
+              <input id="loginUser" autocomplete="username"
+                style="
+                  width:100%;background:transparent;border:none;
+                  border-bottom:1.5px solid rgba(255,255,255,0.3);
+                  padding:8px 8px 8px 24px;
+                  color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;
+                  outline:none;transition:border-color .2s;
+                "
+                placeholder=""
+                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.85)'"
+                onblur="this.style.borderBottomColor='rgba(255,255,255,0.3)'"
+                onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
             </div>
           </div>
-          <div class="form-group" style="margin-bottom:24px">
-            <label class="form-label">Contraseña</label>
+
+          <div style="margin-bottom:28px">
+            <div style="
+              font-size:12px;color:rgba(255,255,255,0.6);
+              font-weight:500;margin-bottom:8px;letter-spacing:0.3px;
+            ">Contraseña</div>
             <div style="position:relative">
-              <i class="fas fa-lock" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:13px"></i>
-              <input class="form-control" id="loginPass" type="password" placeholder="Tu contraseña" autocomplete="current-password"
-                style="padding-left:36px;padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
-              <button onclick="toggleLoginPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:4px" id="togglePassBtn"><i class="fas fa-eye" id="togglePassIcon"></i></button>
+              <i class="fas fa-lock" id="lockIcon" style="
+                position:absolute;left:0;top:50%;transform:translateY(-50%);
+                color:rgba(255,255,255,0.4);font-size:14px;
+              "></i>
+              <input id="loginPass" type="password" autocomplete="current-password"
+                style="
+                  width:100%;background:transparent;border:none;
+                  border-bottom:1.5px solid rgba(255,255,255,0.3);
+                  padding:8px 32px 8px 24px;
+                  color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;
+                  outline:none;transition:border-color .2s;
+                "
+                placeholder=""
+                onfocus="this.style.borderBottomColor='rgba(255,255,255,0.85)'"
+                onblur="this.style.borderBottomColor='rgba(255,255,255,0.3)'"
+                onkeydown="if(event.key==='Enter')doLogin()">
+              <button onclick="toggleLoginPass()" style="
+                position:absolute;right:0;top:50%;transform:translateY(-50%);
+                background:none;border:none;cursor:pointer;
+                color:rgba(255,255,255,0.4);font-size:13px;padding:4px;
+              "><i class="fas fa-eye" id="togglePassIcon"></i></button>
             </div>
           </div>
-          <div id="loginError" style="display:none;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px"></div>
-          <button onclick="doLogin()" id="loginBtn" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;justify-content:center;letter-spacing:.3px">
-            <i class="fas fa-arrow-right-to-bracket"></i> Iniciar Sesión
+
+          <!-- Error -->
+          <div id="loginError" style="
+            display:none;
+            background:rgba(239,68,68,0.2);
+            border:1px solid rgba(239,68,68,0.4);
+            color:#fca5a5;
+            padding:10px 14px;border-radius:10px;
+            font-size:12px;margin-bottom:16px;
+          "></div>
+
+          <!-- Botón -->
+          <button onclick="doLogin()" id="loginBtn" style="
+            width:100%;
+            background:linear-gradient(135deg,#1e40af,#2563eb);
+            border:none;border-radius:50px;
+            color:#fff;font-family:'DM Sans',sans-serif;
+            font-size:15px;font-weight:600;
+            padding:13px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            transition:all .2s;
+            box-shadow:0 8px 24px rgba(37,99,235,0.35);
+            letter-spacing:0.2px;
+          "
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.45)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.35)'">
+            Iniciar Sesión
           </button>
         </div>
       </div>
     </div>`;
-  // Load config for branding
   call('getConfig').then(function(cfg){
     if(!cfg) return;
     var nom = document.getElementById('loginSisNombre');
-    var sub = document.getElementById('loginSisSub');
     var box = document.getElementById('loginLogoBox');
     if(nom && cfg.sistNombre) nom.textContent = cfg.sistNombre;
-    if(sub && cfg.sistSub)    sub.textContent = cfg.sistSub;
     if(box && cfg.sistLogoUrl){
       box.style.background='transparent';
-      box.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain">';
+      box.innerHTML='<img src="'+cfg.sistLogoUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:8px">';
     }
   }).catch(function(){});
   setTimeout(function(){ var u=document.getElementById('loginUser'); if(u) u.focus(); },100);
