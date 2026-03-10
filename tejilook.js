@@ -398,6 +398,378 @@ var _salidaLineas = [];   // [{talla, bultos, pzBolsa}]
 var _salidaCuellos = [];  // [{talla, cantidad}]
 var _salidaModeloCache = {};
 
+
+function renderClientes(){
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Clientes</h1><p>El logo se sube a Drive automáticamente</p></div></div>
+<div class="dual-grid">
+<div class="card">
+<div class="card-header"><div class="card-title" id="formClienteTitle">Nuevo Cliente</div></div>
+<input type="hidden" id="clienteId">
+<input type="hidden" id="clienteLogoUrl">
+<div class="form-group">
+<label class="form-label">Nombre del Cliente *</label>
+<input class="form-control" id="clienteNombre" placeholder="Ej: Liverpool">
+</div>
+<div class="form-group">
+<label class="form-label">Logo del Cliente</label>
+<div class="img-upload-area" id="logoArea" onclick="document.getElementById('logoFile').click()">
+<input type="file" id="logoFile" accept="image/*" style="display:none" onchange="previewImg(this,'logoPreview','logoArea')">
+<i class="fas fa-cloud-upload-alt" style="font-size:28px;color:var(--text-light)"></i>
+<p style="font-size:13px;color:var(--text-muted);margin-top:8px">Clic para subir imagen</p>
+<p style="font-size:11px;color:var(--text-light)">Se guardará en Drive → Clientes_Images</p>
+<img id="logoPreview" style="display:none;width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:8px">
+</div>
+</div>
+<div class="form-group"><label class="form-label">Estado</label>
+<select class="form-control form-select" id="clienteActivo"><option value="SI">Activo</option><option value="NO">Inactivo</option></select>
+</div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-primary" onclick="guardarCliente()"><i class="fas fa-save"></i> Guardar</button>
+<button class="btn btn-ghost" onclick="limpiarFormCliente()"><i class="fas fa-times"></i></button>
+</div>
+</div>
+<div class="card">
+<div class="card-header">
+<div class="card-title">Clientes Registrados</div>
+<div class="search-bar" style="width:200px"><i class="fas fa-search"></i>
+<input type="text" placeholder="Buscar..." id="buscarCliente" oninput="filtrarClientes()">
+</div>
+</div>
+<div id="tablaClientes"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+</div>`;
+cargarTablaClientes();
+}
+
+function renderTablaClientes(data){
+if(!data.length){document.getElementById('tablaClientes').innerHTML='<div class="empty-state"><i class="fas fa-building"></i><p>Sin clientes</p></div>';return;}
+document.getElementById('tablaClientes').innerHTML=`<div class="table-wrap"><table class="table">
+<thead><tr><th>Logo</th><th>Nombre</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>
+${data.map(c=>`<tr>
+<td>${c.logo?'<img src="'+c.logo+'" style="height:36px;border-radius:6px;object-fit:contain">':'<i class="fas fa-building" style="color:var(--text-light)"></i>'}</td>
+<td><strong>${c.cliente}</strong></td><td>${badge(c.activo)}</td>
+<td>
+<button class="btn btn-ghost btn-sm btn-icon" onclick='editarClienteForm(${JSON.stringify(c).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button>
+<button class="btn btn-danger btn-sm btn-icon" title="Desactivar" onclick="if(confirm('¿Desactivar?'))call('desactivarCliente','${c.id}').then(()=>{toast('Desactivado','warning');cargarTablaClientes()})"><i class="fas fa-ban"></i></button>
+<button class="btn btn-danger btn-sm btn-icon" title="Eliminar permanentemente" onclick="if(confirm('¿ELIMINAR permanentemente? Esta acción no se puede deshacer.'))call('eliminarCliente','${c.id}').then(()=>{toast('Eliminado','danger');cargarTablaClientes()})"><i class="fas fa-trash"></i></button>
+</td></tr>`).join('')}
+</tbody></table></div>`;
+}
+
+function renderMaquilas(){
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Maquilas</h1></div></div>
+<div class="dual-grid">
+<div class="card">
+<div class="card-header"><div class="card-title" id="formMaqTitle">Nueva Maquila</div></div>
+<input type="hidden" id="maqId">
+<div class="form-group"><label class="form-label">Nombre *</label><input class="form-control" id="maqNombre" placeholder="Ej: Maquila López"></div>
+<div class="form-group"><label class="form-label">Destino / Dirección</label><input class="form-control" id="maqDestino" placeholder="Dirección completa"></div>
+<div class="form-group"><label class="form-label">Estado</label><select class="form-control form-select" id="maqActivo"><option value="SI">Activa</option><option value="NO">Inactiva</option></select></div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-primary" onclick="guardarMaquila()"><i class="fas fa-save"></i> Guardar</button>
+<button class="btn btn-ghost" onclick="limpiarMaquila()"><i class="fas fa-times"></i></button>
+</div>
+</div>
+<div class="card">
+<div class="card-header"><div class="card-title">Maquilas Registradas</div></div>
+<div id="tablaMaquilas"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+</div>`;
+cargarTablaMaquilas();
+}
+
+function renderTrabajadores(){
+const puestos=['Revisión','Hilvanado','Plancha Banco','Plancha Rodillo','Corte','Recepción','Embolsado','Remalle'];
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Trabajadores</h1><p>La foto se guarda en Drive automáticamente</p></div></div>
+<div class="dual-grid">
+<div class="card">
+<div class="card-header"><div class="card-title" id="formTrabTitle">Nuevo Trabajador</div></div>
+<input type="hidden" id="trabId">
+<input type="hidden" id="trabFotoUrl">
+<div class="form-group"><label class="form-label">Nombre Completo *</label><input class="form-control" id="trabNombre" placeholder="Nombre completo"></div>
+<div class="form-group"><label class="form-label">Puesto / Área</label>
+<select class="form-control form-select" id="trabPuesto">
+${puestos.map(p=>`<option>${p}</option>`).join('')}
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">Foto del Trabajador (opcional)</label>
+<div class="img-upload-area" onclick="document.getElementById('trabFotoFile').click()">
+<input type="file" id="trabFotoFile" accept="image/*" style="display:none" onchange="previewImg(this,'trabFotoPreview','trabFotoArea')">
+<i class="fas fa-camera" style="font-size:24px;color:var(--text-light)"></i>
+<p style="font-size:13px;color:var(--text-muted);margin-top:6px">Clic para subir foto</p>
+<img id="trabFotoPreview" style="display:none;width:64px;height:64px;object-fit:cover;border-radius:50%;margin-top:8px">
+</div>
+</div>
+<div class="form-group"><label class="form-label">Estado</label><select class="form-control form-select" id="trabActivo"><option value="SI">Activo</option><option value="NO">Inactivo</option></select></div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-primary" onclick="guardarTrabajador()"><i class="fas fa-save"></i> Guardar</button>
+<button class="btn btn-ghost" onclick="limpiarTrab()"><i class="fas fa-times"></i></button>
+</div>
+</div>
+<div class="card">
+<div class="card-header"><div class="card-title">Trabajadores</div></div>
+<div id="tablaTrabs"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+</div>`;
+cargarTablaTrabs();
+}
+async function guardarTrabajador(){
+const id=document.getElementById('trabId').value;
+const nombre=document.getElementById('trabNombre').value.trim();
+if(!nombre){toast('Nombre requerido','danger');return;}
+const fileInput=document.getElementById('trabFotoFile');
+let fotoBase64='';
+if(fileInput.files[0]) fotoBase64=await fileToBase64(fileInput.files[0]);
+const data={id,nombre,puesto:document.getElementById('trabPuesto').value,fotoBase64,fotoUrl:document.getElementById('trabFotoUrl').value,activo:document.getElementById('trabActivo').value};
+const btn=document.querySelector('[onclick="guardarTrabajador()"]');
+btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>';btn.disabled=true;
+call(id?'editarTrabajador':'crearTrabajador',data).then(()=>{toast('Guardado ✓');limpiarTrab();cargarTablaTrabs();}).catch(e=>toast(e.message,'danger')).finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+}
+
+function renderModelos(){
+document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(([clientes,maquilas])=>{
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Modelos / Órdenes</h1><p>Cada modelo está ligado a un NoOrden único</p></div></div>
+<div class="dual-grid">
+<div class="card">
+<div class="card-header"><div class="card-title" id="formModTitle">Nuevo Modelo</div></div>
+<input type="hidden" id="modId">
+<input type="hidden" id="modFotoUrl">
+<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="modNoOrden" placeholder="Ej: 54821"></div>
+<div class="form-group"><label class="form-label">Nombre del Modelo *</label><input class="form-control" id="modNombre" placeholder="Ej: Everest"></div>
+<div class="form-group"><label class="form-label">Foto del Modelo</label>
+<div class="img-upload-area" id="modFotoArea" onclick="document.getElementById('modFotoFile').click()" style="cursor:pointer;border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--surface-2)">
+<input type="file" id="modFotoFile" accept="image/*" style="display:none" onchange="previewImg(this,'modFotoPreview','modFotoArea')">
+<i class="fas fa-camera" style="font-size:24px;color:var(--text-muted)"></i>
+<p style="font-size:12px;color:var(--text-muted);margin:6px 0 0">Clic para subir foto</p>
+<img id="modFotoPreview" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:8px;margin-top:8px">
+</div>
+</div>
+<div class="form-group"><label class="form-label">Fecha Límite de Entrega</label><input class="form-control" id="modFecha" type="date"></div>
+<div class="form-group"><label class="form-label">Cliente *</label>
+<select class="form-control form-select" id="modCliente">
+<option value="">— Seleccionar —</option>
+${clientes.map(c=>`<option value="${c.id}" data-nombre="${c.cliente}">${c.cliente}</option>`).join('')}
+</select>
+</div>
+<div class="form-group"><label class="form-label">Maquila (si aplica)</label>
+<select class="form-control form-select" id="modMaquila">
+<option value="">— Sin maquila —</option>
+${maquilas.map(m=>`<option value="${m.id}" data-nombre="${m.maquila}">${m.maquila}</option>`).join('')}
+</select>
+</div>
+<hr class="divider">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<div class="card-title">Tallas del Modelo</div>
+<button class="btn btn-ghost btn-sm" onclick="addModeloTalla()"><i class="fas fa-plus"></i> Agregar</button>
+</div>
+<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+<i class="fas fa-info-circle" style="color:var(--info)"></i>
+1 suéter = 1 frente + 1 espalda + 2 mangas (conversión automática)
+</p>
+<table class="tallas-table"><thead><tr><th>Talla</th><th>Cant. Suéteres</th><th>→ F / E / M</th><th></th></tr></thead>
+<tbody id="modeloTallasBody"></tbody>
+<tfoot><tr><td colspan="2" style="text-align:right;font-weight:600;padding:8px">Total suéteres: <span id="modeloTotalSuet">0</span></td><td colspan="2"></td></tr></tfoot>
+</table>
+<div style="margin-top:20px;display:flex;gap:8px">
+<button class="btn btn-primary" onclick="guardarModelo()"><i class="fas fa-save"></i> Guardar</button>
+<button class="btn btn-ghost" onclick="limpiarModelo()"><i class="fas fa-times"></i></button>
+</div>
+</div>
+<div class="card">
+<div class="card-header"><div class="card-title">Modelos Registrados</div>
+<div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="buscarModelo" oninput="filtrarModelos()"></div>
+</div>
+<div id="tablaModelos"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+</div>`;
+_modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}];
+renderModeloTallasBody();
+cargarTablaModelos();
+});
+}
+
+function renderModeloTallasBody(){
+document.getElementById('modeloTallasBody').innerHTML=_modeloTallas.map((t,i)=>`
+<tr>
+<td><input class="tinput" style="width:55px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.talla}" onchange="_modeloTallas[${i}].talla=this.value"></td>
+<td><input class="tinput" type="number" style="width:80px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.cantidad}" min="0" onchange="_modeloTallas[${i}].cantidad=+this.value;calcModeloTotal();renderModeloTallasBody()"></td>
+<td style="color:var(--text-muted);font-size:12px">${t.cantidad} / ${t.cantidad} / ${t.cantidad*2}</td>
+<td><button class="btn btn-ghost btn-sm btn-icon" onclick="_modeloTallas.splice(${i},1);renderModeloTallasBody()"><i class="fas fa-times"></i></button></td>
+</tr>`).join('');
+calcModeloTotal();
+}
+
+function renderTablaModelos(data){
+if(!data.length){document.getElementById('tablaModelos').innerHTML='<div class="empty-state"><i class="fas fa-tshirt"></i><p>Sin modelos</p></div>';return;}
+document.getElementById('tablaModelos').innerHTML=`<div class="table-wrap"><table class="table">
+<thead><tr><th>Foto</th><th>NoOrden</th><th>Modelo</th><th>Cliente</th><th>Maquila</th><th>F.Entrega</th><th>Estado</th><th>Acc.</th></tr></thead>
+<tbody>${data.map(m=>`<tr>
+<td>${m.foto?`<img src="${m.foto}" style="width:44px;height:44px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">`:'<i class="fas fa-tshirt" style="color:var(--text-light);font-size:20px"></i>'}</td><td><strong>${m.noOrden}</strong></td><td>${m.modelo}</td><td>${m.nombreCliente}</td>
+<td>${m.nombreMaquila||'—'}</td><td>${fmt(m.fechaEntrega)}</td><td>${badge(m.activo)}</td>
+<td>
+<button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editarModeloForm(${_modelos.indexOf(m)})"><i class="fas fa-pencil"></i></button>
+<button class="btn btn-info btn-sm btn-icon" title="Expediente" onclick="abrirExpediente('${m.noOrden}')"><i class="fas fa-folder-open"></i></button>
+<button class="btn btn-danger btn-sm btn-icon" title="Desactivar" onclick="if(confirm('¿Desactivar?'))call('desactivarModelo','${m.id}').then(()=>{toast('Desactivado','warning');cargarTablaModelos()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente? Borra modelo y sus tallas.'))call('eliminarModelo','${m.id}').then(()=>{toast('Eliminado','danger');cargarTablaModelos()})"><i class="fas fa-trash"></i></button>
+</td></tr>`).join('')}</tbody></table></div>`;
+}
+let _entradaTallas=[];
+
+function renderEntradas(){
+document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+call('getTrabajadoresActivos').then(trabajadores=>{
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Entradas</h1><p>Registro de piezas que entran a producción por NoOrden</p></div></div>
+<div class="dual-grid" style="grid-template-columns:400px 1fr">
+<div class="card">
+<div class="card-header"><div class="card-title">Nueva Entrada</div></div>
+<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="entFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+<div class="form-group"><label class="form-label">Trabajador que registra</label>
+<select class="form-control form-select" id="entTrab">
+<option value="">— Seleccionar —</option>
+${trabajadores.map(t=>`<option value="${t.id}" data-nombre="${t.nombre}">${t.nombre}</option>`).join('')}
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">No. Orden *</label>
+<div style="display:flex;gap:8px">
+<input class="form-control" id="entNoOrden" placeholder="Ej: 54821">
+<button class="btn btn-info" onclick="cargarTallasEntrada()"><i class="fas fa-search"></i></button>
+</div>
+<div id="entModeloInfo" style="margin-top:6px;font-size:13px;color:var(--success)"></div>
+</div>
+<hr class="divider">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<div class="card-title">Tallas a Ingresar</div>
+<button class="btn btn-ghost btn-sm" onclick="addEntradaTalla()"><i class="fas fa-plus"></i> Agregar talla</button>
+</div>
+<table class="tallas-table" id="entTallasTable">
+<thead><tr><th>Talla</th><th>Frentes</th><th>Espaldas</th><th>Mangas</th><th></th></tr></thead>
+<tbody id="entTallasBody"></tbody>
+</table>
+<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="guardarEntrada()"><i class="fas fa-save"></i> Registrar Entrada</button>
+</div>
+<div class="card">
+<div class="card-header">
+<div class="card-title">Resumen de Entradas por NoOrden</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:16px">
+<input class="form-control" id="resNoOrden" placeholder="NoOrden para ver resumen" style="max-width:200px">
+<button class="btn btn-primary" onclick="verResumenEntrada()"><i class="fas fa-chart-bar"></i> Ver</button>
+</div>
+<div id="resumenEntradas"><div class="empty-state"><i class="fas fa-inbox"></i><p>Ingresa un NoOrden para ver el resumen de entradas y lo que falta</p></div></div>
+</div>
+</div>`;
+_entradaTallas=[];
+addEntradaTalla();
+});
+}
+
+function renderEntradaTallasBody(){
+document.getElementById('entTallasBody').innerHTML=_entradaTallas.map((t,i)=>`
+<tr>
+<td><input class="tinput" style="width:55px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.talla}" onchange="_entradaTallas[${i}].talla=this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.frentes}" onchange="_entradaTallas[${i}].frentes=+this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.espaldas}" onchange="_entradaTallas[${i}].espaldas=+this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.mangas}" onchange="_entradaTallas[${i}].mangas=+this.value"></td>
+<td><button class="btn btn-ghost btn-sm btn-icon" onclick="_entradaTallas.splice(${i},1);renderEntradaTallasBody()"><i class="fas fa-times"></i></button></td>
+</tr>`).join('');
+}
+
+function renderProduccion(){
+document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+call('getTrabajadoresActivos').then(trabajadores=>{
+const procesos=['Revisión','Hilvanado','Plancha Banco','Plancha Rodillo','Corte','Remalle'];
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Producción de Trabajadores</h1><p>El sistema valida que no se exceda lo que entró por talla</p></div></div>
+<div class="dual-grid" style="grid-template-columns:420px 1fr">
+<div class="card">
+<div class="card-header"><div class="card-title">Nuevo Registro</div></div>
+<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="prodFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+<div class="form-group"><label class="form-label">Trabajador *</label>
+<select class="form-control form-select" id="prodTrab">
+<option value="">— Seleccionar —</option>
+${trabajadores.map(t=>`<option value="${t.id}" data-nombre="${t.nombre}">${t.nombre} (${t.puesto})</option>`).join('')}
+</select>
+</div>
+<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="prodNoOrden" placeholder="Ej: 54821"></div>
+<div class="form-group"><label class="form-label">Proceso *</label>
+<select class="form-control form-select" id="prodProceso">
+${procesos.map(p=>`<option>${p}</option>`).join('')}
+</select>
+</div>
+<hr class="divider">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<div class="card-title">Tallas Trabajadas</div>
+<button class="btn btn-ghost btn-sm" onclick="addProdTalla()"><i class="fas fa-plus"></i></button>
+</div>
+<div style="background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--info)">
+<i class="fas fa-shield-halved"></i> El sistema valida automáticamente que la suma de producción no supere las entradas registradas para cada talla y proceso.
+</div>
+<table class="tallas-table"><thead><tr><th>Talla</th><th>Frentes</th><th>Espaldas</th><th>Mangas</th><th></th></tr></thead>
+<tbody id="prodTallasBody"></tbody></table>
+<div class="form-group" style="margin-top:16px"><label class="form-label">Observaciones</label>
+<textarea class="form-control" id="prodObs" rows="2" placeholder="Ej: Por falta de hilvanado, trabajó en revisión"></textarea>
+</div>
+<button class="btn btn-primary" style="width:100%" onclick="guardarProduccion()"><i class="fas fa-save"></i> Registrar</button>
+</div>
+<div class="card">
+<div class="card-header"><div class="card-title">Producción del Día</div></div>
+<div id="tablaProd"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+</div>`;
+_prodTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
+renderProdTallasBody();
+cargarTablaProd();
+});
+}
+
+function renderProdTallasBody(){
+document.getElementById('prodTallasBody').innerHTML=_prodTallas.map((t,i)=>`
+<tr>
+<td><input class="tinput" style="width:55px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.talla}" onchange="_prodTallas[${i}].talla=this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.frentes}" onchange="_prodTallas[${i}].frentes=+this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.espaldas}" onchange="_prodTallas[${i}].espaldas=+this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.mangas}" onchange="_prodTallas[${i}].mangas=+this.value"></td>
+<td><button class="btn btn-ghost btn-sm btn-icon" onclick="_prodTallas.splice(${i},1);renderProdTallasBody()"><i class="fas fa-times"></i></button></td>
+</tr>`).join('');
+}
+
+function renderEmbolsado(){
+document.getElementById('main').innerHTML=`
+<div class="page-header"><div><h1>Embolsado</h1></div></div>
+<div class="card" style="max-width:560px">
+<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="embFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="embOrden" placeholder="Ej: 54821"></div>
+<hr class="divider">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+<div class="card-title">Tallas Embolsadas</div>
+<button class="btn btn-ghost btn-sm" onclick="_embTallas.push({talla:'',cantidad:0});renderEmbTallas()"><i class="fas fa-plus"></i></button>
+</div>
+<table class="tallas-table"><thead><tr><th>Talla</th><th>Cantidad</th><th></th></tr></thead>
+<tbody id="embTallasBody"></tbody>
+<tfoot><tr><td colspan="2" style="text-align:right;font-weight:600;padding:8px">Total: <span id="embTotal">0</span></td><td></td></tr></tfoot>
+</table>
+<button class="btn btn-primary" style="margin-top:20px;width:100%" onclick="guardarEmbolsado()"><i class="fas fa-box-open"></i> Registrar Embolsado</button>
+</div>`;
+renderEmbTallas();
+}
+
+function renderEmbTallas(){
+document.getElementById('embTallasBody').innerHTML=_embTallas.map((t,i)=>`
+<tr>
+<td><input class="tinput" style="width:70px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.talla}" onchange="_embTallas[${i}].talla=this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:90px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${t.cantidad}" onchange="_embTallas[${i}].cantidad=+this.value;document.getElementById('embTotal').textContent=_embTallas.reduce((s,x)=>s+(+x.cantidad||0),0)"></td>
+<td><button class="btn btn-ghost btn-sm btn-icon" onclick="_embTallas.splice(${i},1);renderEmbTallas()"><i class="fas fa-times"></i></button></td>
+</tr>`).join('');
+document.getElementById('embTotal').textContent=_embTallas.reduce((s,t)=>s+(+t.cantidad||0),0);
+}
+
 function renderSalidas(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   call('getMaquilasActivas').then(function(maquilas){
