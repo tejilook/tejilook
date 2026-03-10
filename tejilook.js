@@ -734,6 +734,35 @@ cargarTablaProd();
 });
 }
 
+function cargarTablaProd(){
+  call('getProduccionHoy').then(function(data){
+    var el = document.getElementById('tablaProd');
+    if(!el) return;
+    if(!data || !data.length){
+      el.innerHTML='<div class="empty-state"><i class="fas fa-person-digging"></i><p>Sin registros hoy</p></div>';
+      return;
+    }
+    var rows = data.map(function(r){
+      var tallas = (r.tallas||[]).map(function(t){
+        return '<span class="badge badge-gray" style="margin:2px">'+t.talla+': F'+t.frentes+' E'+t.espaldas+' M'+t.mangas+'</span>';
+      }).join('');
+      return '<tr>'
+        +'<td><strong>'+r.nombreTrabajador+'</strong></td>'
+        +'<td>'+r.noOrden+'</td>'
+        +'<td><span class="badge badge-info">'+r.proceso+'</span></td>'
+        +'<td>'+tallas+'</td>'
+        +'<td style="font-size:12px;color:var(--text-muted);max-width:150px">'+(r.observaciones||'—')+'</td>'
+        +'</tr>';
+    }).join('');
+    el.innerHTML='<div class="table-wrap"><table class="table">'
+      +'<thead><tr><th>Trabajador</th><th>Orden</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }).catch(function(e){
+    var el = document.getElementById('tablaProd');
+    if(el) el.innerHTML='<div style="color:var(--danger);padding:16px">Error: '+e.message+'</div>';
+  });
+}
+
 function renderProdTallasBody(){
 document.getElementById('prodTallasBody').innerHTML=_prodTallas.map((t,i)=>`
 <tr>
