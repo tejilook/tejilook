@@ -34,104 +34,81 @@ function dashCargar(){
 }
 
 function dashRender(d){
-  var p = d.porTrabajador || [];
-  var pm = d.porMaquila   || [];
-  var pa = d.porArea      || {};
-  var total = d.totalPeriodo || 0;
-
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  var periodoLabel = {semana:'Esta semana', mes:'Este mes', anio:'Este año'}[window._dashPeriodo]||'';
+  var p   = d.porTrabajador || [];
+  var pm  = d.porMaquila    || [];
+  var pa  = d.porProceso    || {};
+  var totalPiezas = d.totalPiezas || 0;
+  var labels = {semana:'Esta semana', mes:'Este mes', anio:'Este a\u00f1o'};
+  var periodoLabel = labels[window._dashPeriodo] || '';
   var topTrab = p.length ? p[0] : null;
   var topMaq  = pm.length ? pm[0] : null;
-  var procesosCount = Object.keys(pa).length;
+  var procKeys = Object.keys(pa);
 
   var html =
-    // KPI cards
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">'
-      +dashKpi('fas fa-shirt',     'Suéteres producidos', total,              'var(--primary)',  periodoLabel)
-      +dashKpi('fas fa-users',     'Trabajadores activos', p.length,          'var(--success)',  'con producción registrada')
-      +dashKpi('fas fa-trophy',    'Top trabajador',       topTrab?topTrab.nombre:'—', 'var(--warning)', topTrab?topTrab.total+' pzas':'')
-      +dashKpi('fas fa-truck-fast','Top maquila',          topMaq?topMaq.nombre:'—',  'var(--info)',    topMaq?topMaq.sueteres+' pzas enviadas':'')
+      +dashKpi('fas fa-layer-group','Piezas procesadas', totalPiezas, 'var(--primary)', periodoLabel)
+      +dashKpi('fas fa-users','Trabajadores activos', p.length, 'var(--success)', 'con producci\u00f3n')
+      +dashKpi('fas fa-trophy','Top trabajador', topTrab ? topTrab.nombre : '\u2014', 'var(--warning)', topTrab ? topTrab.piezas+' piezas' : '')
+      +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '\u2014', 'var(--info)', topMaq ? topMaq.sueteres+' su\u00e9teres enviados' : '')
     +'</div>'
-
-    // ── Fila 1: Barras trabajadores + Dona procesos ───────────────────────
     +'<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
-
-      // Barras horizontales — producción por trabajador
       +'<div class="card" style="padding:20px">'
-        +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px">Producción por Trabajador</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' — piezas totales</div>'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M</div>'
         +'<div id="chartTrabajadores"></div>'
       +'</div>'
-
-      // Dona — distribución por proceso
       +'<div class="card" style="padding:20px">'
-        +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px">Por Proceso</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Distribución '+periodoLabel.toLowerCase()+'</div>'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Proceso</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+'</div>'
         +'<canvas id="chartProcesos" width="300" height="240"></canvas>'
       +'</div>'
-
     +'</div>'
-
-    // ── Fila 2: Maquilas barras + tabla comparativa ────────────────────────
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
-
-      // Maquilas
       +'<div class="card" style="padding:20px">'
-        +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Piezas enviadas '+periodoLabel.toLowerCase()+'</div>'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
         +'<div id="chartMaquilas"></div>'
       +'</div>'
-
-      // Tabla comparativa por trabajador+proceso
       +'<div class="card" style="padding:20px">'
-        +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Cada trabajador por puesto</div>'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
         +'<div style="overflow-x:auto"><table class="table" style="font-size:12px">'
           +'<thead><tr><th>Trabajador</th>'
-          +Object.keys(pa).map(function(proc){ return '<th style="text-align:center">'+proc+'</th>'; }).join('')
-          +'<th style="text-align:center">Total</th></tr></thead>'
-          +'<tbody>'
+          +procKeys.map(function(p){ return '<th style="text-align:center">'+p+'</th>'; }).join('')
+          +'<th style="text-align:right">Total</th></tr></thead><tbody>'
           +p.map(function(t){
-            return '<tr>'
-              +'<td><strong>'+t.nombre+'</strong></td>'
-              +Object.keys(pa).map(function(proc){
-                var v = t.porProceso[proc]||0;
-                return '<td style="text-align:center">'+(v?'<span class="badge badge-info">'+v+'</span>':'<span style="color:var(--text-light)">—</span>')+'</td>';
+            return '<tr><td><strong>'+t.nombre+'</strong></td>'
+              +procKeys.map(function(proc){
+                var v = t.porProceso[proc] || 0;
+                return '<td style="text-align:center">'+(v ? '<span class="badge badge-info">'+v+'</span>' : '<span style="color:var(--text-light)">\u2014</span>')+'</td>';
               }).join('')
-              +'<td style="text-align:center"><strong style="color:var(--primary)">'+t.total+'</strong></td>'
-            +'</tr>';
+              +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td></tr>';
           }).join('')
           +'</tbody></table></div>'
       +'</div>'
-
     +'</div>';
 
   document.getElementById('dashContent').innerHTML = html;
-
-  // ── Renderizar gráficas ────────────────────────────────────────────────────
   var colors = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
 
-  // 1. Barras trabajadores
-  var maxT = p.length ? p[0].total : 1;
-  var barsT = p.slice(0,10).map(function(t, i){
-    var pct = maxT ? Math.round(t.total/maxT*100) : 0;
+  // Barras trabajadores
+  var maxT = p.length ? p[0].piezas : 1;
+  document.getElementById('chartTrabajadores').innerHTML = p.slice(0,10).map(function(t,i){
+    var pct = maxT ? Math.round(t.piezas/maxT*100) : 0;
     var col = colors[i % colors.length];
     return '<div style="margin-bottom:10px">'
       +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
         +'<span style="font-size:13px;font-weight:500">'+t.nombre+'</span>'
-        +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+t.total+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+t.piezas+' pz</span>'
       +'</div>'
       +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px;transition:width .6s ease"></div>'
-      +'</div>'
-    +'</div>';
-  }).join('');
-  document.getElementById('chartTrabajadores').innerHTML = barsT || '<div class="empty-state" style="padding:20px"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
+      +'</div></div>';
+  }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  // 2. Barras maquilas
+  // Barras maquilas
   var maxM = pm.length ? pm[0].sueteres : 1;
-  var barsM = pm.slice(0,8).map(function(m, i){
+  document.getElementById('chartMaquilas').innerHTML = pm.slice(0,8).map(function(m,i){
     var pct = maxM ? Math.round(m.sueteres/maxM*100) : 0;
     var col = colors[i % colors.length];
     return '<div style="margin-bottom:10px">'
@@ -139,22 +116,19 @@ function dashRender(d){
         +'<span style="font-size:13px;font-weight:500">'+m.nombre+'</span>'
         +'<div style="display:flex;gap:8px;align-items:center">'
           +'<span style="font-size:11px;color:var(--text-muted)">'+m.salidas+' salidas</span>'
-          +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' pz</span>'
+          +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' su</span>'
         +'</div>'
       +'</div>'
       +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px;transition:width .6s ease"></div>'
-      +'</div>'
-    +'</div>';
-  }).join('');
-  document.getElementById('chartMaquilas').innerHTML = barsM || '<div class="empty-state" style="padding:20px"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
+      +'</div></div>';
+  }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  // 3. Dona procesos con Canvas
-  var procLabels = Object.keys(pa);
+  // Dona procesos
+  var procLabels = procKeys;
   var procVals   = procLabels.map(function(k){ return pa[k]; });
   dashDrawDonut('chartProcesos', procLabels, procVals, colors);
 }
-
 function dashKpi(icon, label, value, color, sub){
   return '<div class="card" style="padding:18px;display:flex;gap:14px;align-items:center">'
     +'<div style="width:44px;height:44px;border-radius:12px;background:'+color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
