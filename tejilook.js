@@ -412,6 +412,9 @@ var _salidaCuellos = [];  // [{talla, cantidad}]
 var _salidaModeloCache = {};
 
 
+
+function cargarTablaTrabajadores(){ cargarTablaTrabs(); }
+
 function renderClientes(){
 document.getElementById('main').innerHTML=`
 <div class="page-header"><div><h1>Clientes</h1><p>El logo se sube a Drive automáticamente</p></div></div>
@@ -454,6 +457,19 @@ document.getElementById('main').innerHTML=`
 </div>`;
 cargarTablaClientes();
 }
+
+
+function cargarTablaClientes(){ call('getClientes').then(d=>{_clientes=d;renderTablaClientes(d);}); }
+
+function cargarTablaMaquilas(){ call('getMaquilas').then(data=>{ if(!data.length){document.getElementById('tablaMaquilas').innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Sin maquilas</p></div>';return;} document.getElementById('tablaMaquilas').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Destino</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>${data.map(m=>`<tr><td><strong>${m.maquila}</strong></td><td>${m.destino||'—'}</td><td>${badge(m.activo)}</td><td><button class="btn btn-ghost btn-sm btn-icon" onclick='editarMaquilaForm(${JSON.stringify(m).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button><button class="btn btn-danger btn-sm btn-icon" onclick="if(confirm('¿Desactivar?'))call('desactivarMaquila','${m.id}').then(()=>{toast('Desactivado','warning');cargarTablaMaquilas()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente?'))call('eliminarMaquila','${m.id}').then(()=>{toast('Eliminado','danger');cargarTablaMaquilas()})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`; }); }
+
+function cargarTablaTrabs(){ call('getTrabajadores').then(data=>{ if(!data.length){document.getElementById('tablaTrabs').innerHTML='<div class="empty-state"><i class="fas fa-users"></i><p>Sin trabajadores</p></div>';return;} document.getElementById('tablaTrabs').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Foto</th><th>Nombre</th><th>Puesto</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>${data.map(t=>`<tr><td>${t.foto?`<img src="${t.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">`:'<div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">${t.nombre.charAt(0).toUpperCase()}</div>'}</td><td><strong>${t.nombre}</strong></td><td>${t.puesto||'—'}</td><td>${badge(t.activo)}</td><td><button class="btn btn-ghost btn-sm btn-icon" onclick='editarTrabForm(${JSON.stringify(t).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button><button class="btn btn-danger btn-sm btn-icon" onclick="if(confirm('¿Desactivar?'))call('desactivarTrabajador','${t.id}').then(()=>{toast('Desactivado','warning');cargarTablaTrabs()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente?'))call('eliminarTrabajador','${t.id}').then(()=>{toast('Eliminado','danger');cargarTablaTrabs()})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`; }); }
+
+function cargarTablaModelos(){ call('getModelos').then(d=>{_modelos=d;renderTablaModelos(d);}); }
+
+function filtrarClientes(){ const q=document.getElementById('buscarCliente').value.toLowerCase(); renderTablaClientes(_clientes.filter(c=>c.cliente.toLowerCase().includes(q))); }
+
+function filtrarModelos(){ const q=document.getElementById('buscarModelo').value.toLowerCase(); renderTablaModelos(_modelos.filter(m=>m.noOrden.toString().toLowerCase().includes(q)||m.modelo.toLowerCase().includes(q)||m.nombreCliente.toLowerCase().includes(q))); }
 
 function renderTablaClientes(data){
 if(!data.length){document.getElementById('tablaClientes').innerHTML='<div class="empty-state"><i class="fas fa-building"></i><p>Sin clientes</p></div>';return;}
