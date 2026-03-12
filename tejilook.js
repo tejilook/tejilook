@@ -1,4 +1,5 @@
-let currentView='', currentUser=null; let isDark = localStorage.getItem('dark')==='1'; if(isDark) document.documentElement.setAttribute('data-theme','dark'); function navigate(view, param){ currentView=view; try{ window.location.hash=view; }catch(e){} document.querySelectorAll('.nav-item,.nav-sub-item').forEach(el=>el.classList.remove('active')); 
+let currentView='', currentUser=null;
+let _clientes=[], _modelos=[], _maquilas=[], _trabajadores=[]; let isDark = localStorage.getItem('dark')==='1'; if(isDark) document.documentElement.setAttribute('data-theme','dark'); function navigate(view, param){ currentView=view; try{ window.location.hash=view; }catch(e){} document.querySelectorAll('.nav-item,.nav-sub-item').forEach(el=>el.classList.remove('active')); 
 
 const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', trabajadores:'Trabajadores', modelos:'Modelos / Órdenes', entradas:'Entradas', produccion:'Producción Trabajadores', embolsado:'Embolsado', salidas:'Salida a Maquila', buscar:'Buscar por NoOrden', 'ver-entradas':'Ver Entradas', 'ver-produccion':'Ver Producción', 'ver-salidas':'Ver Salidas', usuarios:'Usuarios', bitacora:'Bitácora', configuracion:'Configuración' }; document.getElementById('pageTitle').textContent = titles[view]||view; document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div> Cargando...</div>'; const fns={ dashboard:renderDashboard, clientes:renderClientes, maquilas:renderMaquilas, trabajadores:renderTrabajadores, modelos:renderModelos, entradas:renderEntradas, produccion:renderProduccion, embolsado:renderEmbolsado, salidas:renderSalidas, buscar:()=>renderBuscar(param), 'ver-entradas':renderVerEntradas, 'ver-produccion':renderVerProduccion, 'ver-salidas':renderVerSalidas, usuarios:renderUsuarios, bitacora:renderBitacora, configuracion:renderConfiguracion }; if(fns[view]) fns[view](); else document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-tools"></i><p>Vista en construcción</p></div>'; if(window.innerWidth<768){
   document.getElementById('sidebar').classList.remove('open');
@@ -459,13 +460,13 @@ cargarTablaClientes();
 }
 
 
-function cargarTablaClientes(){ call('getClientes').then(d=>{_clientes=d;renderTablaClientes(d);}); }
+function cargarTablaClientes(){ call('getClientes').then(function(d){ _clientes=d||[]; renderTablaClientes(_clientes); }).catch(function(e){ var el=document.getElementById('tablaClientes'); if(el) el.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: '+e.message+'</p></div>'; }); }
 
 function cargarTablaMaquilas(){ call('getMaquilas').then(data=>{ if(!data.length){document.getElementById('tablaMaquilas').innerHTML='<div class="empty-state"><i class="fas fa-industry"></i><p>Sin maquilas</p></div>';return;} document.getElementById('tablaMaquilas').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Destino</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>${data.map(m=>`<tr><td><strong>${m.maquila}</strong></td><td>${m.destino||'—'}</td><td>${badge(m.activo)}</td><td><button class="btn btn-ghost btn-sm btn-icon" onclick='editarMaquilaForm(${JSON.stringify(m).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button><button class="btn btn-danger btn-sm btn-icon" onclick="if(confirm('¿Desactivar?'))call('desactivarMaquila','${m.id}').then(()=>{toast('Desactivado','warning');cargarTablaMaquilas()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente?'))call('eliminarMaquila','${m.id}').then(()=>{toast('Eliminado','danger');cargarTablaMaquilas()})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`; }); }
 
 function cargarTablaTrabs(){ call('getTrabajadores').then(data=>{ if(!data.length){document.getElementById('tablaTrabs').innerHTML='<div class="empty-state"><i class="fas fa-users"></i><p>Sin trabajadores</p></div>';return;} document.getElementById('tablaTrabs').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Foto</th><th>Nombre</th><th>Puesto</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>${data.map(t=>`<tr><td>${t.foto?`<img src="${t.foto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">`:'<div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">${t.nombre.charAt(0).toUpperCase()}</div>'}</td><td><strong>${t.nombre}</strong></td><td>${t.puesto||'—'}</td><td>${badge(t.activo)}</td><td><button class="btn btn-ghost btn-sm btn-icon" onclick='editarTrabForm(${JSON.stringify(t).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button><button class="btn btn-danger btn-sm btn-icon" onclick="if(confirm('¿Desactivar?'))call('desactivarTrabajador','${t.id}').then(()=>{toast('Desactivado','warning');cargarTablaTrabs()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente?'))call('eliminarTrabajador','${t.id}').then(()=>{toast('Eliminado','danger');cargarTablaTrabs()})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`; }); }
 
-function cargarTablaModelos(){ call('getModelos').then(d=>{_modelos=d;renderTablaModelos(d);}); }
+function cargarTablaModelos(){ call('getModelos').then(function(d){ _modelos=d||[]; renderTablaModelos(_modelos); }).catch(function(e){ var el=document.getElementById('tablaModelos'); if(el) el.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: '+e.message+'</p></div>'; }); }
 
 function filtrarClientes(){ const q=document.getElementById('buscarCliente').value.toLowerCase(); renderTablaClientes(_clientes.filter(c=>c.cliente.toLowerCase().includes(q))); }
 
@@ -635,18 +636,39 @@ calcModeloTotal();
 }
 
 function renderTablaModelos(data){
-if(!data.length){document.getElementById('tablaModelos').innerHTML='<div class="empty-state"><i class="fas fa-tshirt"></i><p>Sin modelos</p></div>';return;}
-document.getElementById('tablaModelos').innerHTML=`<div class="table-wrap"><table class="table">
-<thead><tr><th>Foto</th><th>NoOrden</th><th>Modelo</th><th>Cliente</th><th>Maquila</th><th>F.Entrega</th><th>Estado</th><th>Acc.</th></tr></thead>
-<tbody>${data.map(m=>`<tr>
-<td>${m.foto?`<img src="${m.foto}" style="width:44px;height:44px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">`:'<i class="fas fa-tshirt" style="color:var(--text-light);font-size:20px"></i>'}</td><td><strong>${m.noOrden}</strong></td><td>${m.modelo}</td><td>${m.nombreCliente}</td>
-<td>${m.nombreMaquila||'—'}</td><td>${fmt(m.fechaEntrega)}</td><td>${badge(m.activo)}</td>
-<td>
-<button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editarModeloForm(${_modelos.indexOf(m)})"><i class="fas fa-pencil"></i></button>
-<button class="btn btn-info btn-sm btn-icon" title="Expediente" onclick="abrirExpediente('${m.noOrden}')"><i class="fas fa-folder-open"></i></button>
-<button class="btn btn-danger btn-sm btn-icon" title="Desactivar" onclick="if(confirm('¿Desactivar?'))call('desactivarModelo','${m.id}').then(()=>{toast('Desactivado','warning');cargarTablaModelos()})"><i class="fas fa-ban"></i></button><button class="btn btn-danger btn-sm btn-icon" title="Eliminar fila" onclick="if(confirm('¿ELIMINAR permanentemente? Borra modelo y sus tallas.'))call('eliminarModelo','${m.id}').then(()=>{toast('Eliminado','danger');cargarTablaModelos()})"><i class="fas fa-trash"></i></button>
-</td></tr>`).join('')}</tbody></table></div>`;
+  var el = document.getElementById('tablaModelos');
+  if(!el) return;
+  if(!data || !data.length){
+    el.innerHTML='<div class="empty-state"><i class="fas fa-tshirt"></i><p>Sin modelos</p></div>';
+    return;
+  }
+  var rows = data.map(function(m, i){
+    var foto = m.foto
+      ? '<img src="'+m.foto+'" style="width:44px;height:44px;object-fit:cover;border-radius:8px" onerror="this.style.display=\'none\'">'
+      : '<i class="fas fa-tshirt" style="color:var(--text-light);font-size:20px"></i>';
+    var mData = encodeURIComponent(JSON.stringify(m));
+    return '<tr>'
+      +'<td>'+foto+'</td>'
+      +'<td><strong>'+m.noOrden+'</strong></td>'
+      +'<td>'+m.modelo+'</td>'
+      +'<td>'+(m.nombreCliente||'—')+'</td>'
+      +'<td>'+(m.nombreMaquila||'—')+'</td>'
+      +'<td>'+fmt(m.fechaEntrega)+'</td>'
+      +'<td>'+badge(m.activo)+'</td>'
+      +'<td>'
+        +'<button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editarModeloForm('+i+')"><i class="fas fa-pencil"></i></button>'
+        +'<button class="btn btn-info btn-sm btn-icon" title="Expediente" onclick="abrirExpediente(\''+m.noOrden+'\')"><i class="fas fa-folder-open"></i></button>'
+        +'<button class="btn btn-danger btn-sm btn-icon" title="Desactivar" onclick="if(confirm(\'¿Desactivar?\'))call(\'desactivarModelo\',\''+m.id+'\').then(function(){toast(\'Desactivado\',\'warning\');cargarTablaModelos()})"><i class="fas fa-ban"></i></button>'
+        +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="if(confirm(\'¿ELIMINAR permanentemente?\'))call(\'eliminarModelo\',\''+m.id+'\').then(function(){toast(\'Eliminado\',\'danger\');cargarTablaModelos()})"><i class="fas fa-trash"></i></button>'
+      +'</td>'
+    +'</tr>';
+  }).join('');
+  el.innerHTML =
+    '<div class="table-wrap"><table class="table">'
+    +'<thead><tr><th>Foto</th><th>NoOrden</th><th>Modelo</th><th>Cliente</th><th>Maquila</th><th>F.Entrega</th><th>Estado</th><th>Acc.</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
 }
+
 let _entradaTallas=[];
 
 function renderEntradas(){
