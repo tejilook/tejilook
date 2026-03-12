@@ -472,6 +472,223 @@ function filtrarClientes(){ const q=document.getElementById('buscarCliente').val
 
 function filtrarModelos(){ const q=document.getElementById('buscarModelo').value.toLowerCase(); renderTablaModelos(_modelos.filter(m=>m.noOrden.toString().toLowerCase().includes(q)||m.modelo.toLowerCase().includes(q)||m.nombreCliente.toLowerCase().includes(q))); }
 
+
+function addEntradaTalla(){ _entradaTallas.push({talla:'',frentes:0,espaldas:0,mangas:0}); renderEntradaTallasBody(); }
+
+function addModeloTalla(){ _modeloTallas.push({talla:'',cantidad:0}); renderModeloTallasBody(); }
+
+function addProdTalla(){ _prodTallas.push({talla:'',frentes:0,espaldas:0,mangas:0}); renderProdTallasBody(); }
+
+function cargarTallasEntrada(){
+const no=document.getElementById('entNoOrden').value.trim();
+if(!no){toast('Ingresa un NoOrden','danger');return;}
+const info=document.getElementById('entModeloInfo');
+info.innerHTML='<i class="fas fa-spinner fa-spin"></i> Buscando...';
+call('getModeloByNoOrden',no).then(m=>{
+if(!m){info.innerHTML='<span style="color:var(--danger)">NoOrden no encontrado</span>';return;}
+info.innerHTML=`<i class="fas fa-check-circle"></i> <strong>${m.modelo}</strong> | Cliente: ${m.nombreCliente}`;
+_entradaTallas=m.tallas.map(t=>({talla:t.talla,frentes:0,espaldas:0,mangas:0}));
+renderEntradaTallasBody();
+}).catch(()=>info.innerHTML='<span style="color:var(--danger)">Error al buscar</span>');
+}
+
+function editarClienteForm(c){ document.getElementById('clienteId').value=c.id; document.getElementById('clienteNombre').value=c.cliente; document.getElementById('clienteLogoUrl').value=c.logo||''; document.getElementById('clienteActivo').value=c.activo; if(c.logo){const img=document.getElementById('logoPreview');img.src=c.logo;img.style.display='block';} document.getElementById('formClienteTitle').textContent='Editar Cliente'; window.scrollTo(0,0); }
+
+function editarMaquilaForm(m){ document.getElementById('maqId').value=m.id; document.getElementById('maqNombre').value=m.maquila; document.getElementById('maqDestino').value=m.destino||''; document.getElementById('maqActivo').value=m.activo; document.getElementById('formMaqTitle').textContent='Editar Maquila'; window.scrollTo(0,0); }
+
+function editarModeloForm(idx){
+const m=_modelos[idx];
+if(!m) return;
+document.getElementById('modId').value=m.id;
+document.getElementById('modNoOrden').value=m.noOrden;
+document.getElementById('modNombre').value=m.modelo;
+document.getElementById('modFecha').value=m.fechaEntrega||'';
+document.getElementById('modFotoUrl').value=m.foto||'';
+document.getElementById('modCliente').value=m.idCliente||'';
+document.getElementById('modMaquila').value=m.idMaquila||'';
+if(m.foto){const p=document.getElementById('modFotoPreview');if(p){p.src=m.foto;p.style.display='block';}}
+call('getModeloTallas',m.id).then(tallas=>{
+_modeloTallas=tallas.map(t=>({talla:t.talla,cantidad:t.cantidadSueter}));
+renderModeloTallasBody();
+});
+document.getElementById('formModTitle').textContent='Editar Modelo';
+window.scrollTo(0,0);
+}
+
+function editarTrabForm(t){ document.getElementById('trabId').value=t.id; document.getElementById('trabNombre').value=t.nombre; document.getElementById('trabPuesto').value=t.puesto||'Revisión'; document.getElementById('trabFotoUrl').value=t.foto||''; document.getElementById('trabActivo').value=t.activo; if(t.foto){const img=document.getElementById('trabFotoPreview');img.src=t.foto;img.style.display='block';} document.getElementById('formTrabTitle').textContent='Editar Trabajador'; window.scrollTo(0,0); }
+let _modeloTallas=[{talla:'',cantidad:0}];
+
+async function guardarCliente(){
+const id=document.getElementById('clienteId').value;
+const nombre=document.getElementById('clienteNombre').value.trim();
+if(!nombre){toast('El nombre es requerido','danger');return;}
+const fileInput=document.getElementById('logoFile');
+let logoBase64='';
+if(fileInput.files[0]){
+logoBase64=await fileToBase64(fileInput.files[0]);
+
+}
+const data={id, cliente:nombre, logoBase64, logoUrl:document.getElementById('clienteLogoUrl').value, activo:document.getElementById('clienteActivo').value};
+const fn=id?'editarCliente':'crearCliente';
+const btn=document.querySelector('[onclick="guardarCliente()"]');
+btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Guardando...';
+btn.disabled=true;
+call(fn,data).then(()=>{
+toast(id?'Cliente actualizado':'Cliente creado ✓');
+limpiarFormCliente(); cargarTablaClientes();
+}).catch(e=>toast('Error: '+e.message,'danger'))
+.finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+}
+
+function guardarEntrada(){
+const noOrden=document.getElementById('entNoOrden').value.trim();
+if(!noOrden){toast('NoOrden requerido','danger');return;}
+const sel=document.getElementById('entTrab');
+const tallas=_entradaTallas.filter(t=>t.talla&&(t.frentes>0||t.espaldas>0||t.mangas>0));
+if(!tallas.length){toast('Ingresa al menos una talla con piezas','danger');return;}
+const infoEl=document.getElementById('entModeloInfo');
+call('registrarEntrada',{fecha:document.getElementById('entFecha').value,idTrabajador:sel.value,nombreTrabajador:sel.value?sel.options[sel.selectedIndex].dataset.nombre:'',noOrden,tallas}).then(()=>{
+toast('Entrada registrada ✓');
+_entradaTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
+renderEntradaTallasBody();
+document.getElementById('resNoOrden').value=noOrden;
+verResumenEntrada();
+}).catch(e=>toast(e.message,'danger'));
+}
+
+function guardarMaquila(){ const id=document.getElementById('maqId').value; const nombre=document.getElementById('maqNombre').value.trim(); if(!nombre){toast('Nombre requerido','danger');return;} const data={id,maquila:nombre,destino:document.getElementById('maqDestino').value,activo:document.getElementById('maqActivo').value}; call(id?'editarMaquila':'crearMaquila',data).then(()=>{toast('Guardado ✓');limpiarMaquila();cargarTablaMaquilas();}).catch(e=>toast(e.message,'danger')); }
+
+async function guardarModelo(){
+const id=document.getElementById('modId').value;
+const noOrden=document.getElementById('modNoOrden').value.trim();
+const nombre=document.getElementById('modNombre').value.trim();
+const selCli=document.getElementById('modCliente');
+if(!noOrden){toast('NoOrden requerido','danger');return;}
+if(!nombre){toast('Nombre del modelo requerido','danger');return;}
+if(!selCli.value){toast('Selecciona un cliente','danger');return;}
+const tallas=_modeloTallas.filter(t=>t.talla&&t.cantidad>0);
+if(!tallas.length){toast('Agrega al menos una talla','danger');return;}
+const selMaq=document.getElementById('modMaquila');
+const modFotoFile=document.getElementById('modFotoFile');
+let modFotoBase64='';
+if(modFotoFile.files[0]) modFotoBase64=await fileToBase64(modFotoFile.files[0]);
+const data={id,noOrden,modelo:nombre,fechaEntrega:document.getElementById('modFecha').value,idCliente:selCli.value,nombreCliente:selCli.options[selCli.selectedIndex].dataset.nombre,idMaquila:selMaq.value,nombreMaquila:selMaq.value?selMaq.options[selMaq.selectedIndex].dataset.nombre:'',activo:'SI',tallas,fotoBase64:modFotoBase64,fotoUrl:document.getElementById('modFotoUrl').value};
+call(id?'editarModelo':'crearModelo',data).then(()=>{toast('Modelo guardado ✓');limpiarModelo();cargarTablaModelos();}).catch(e=>toast(e.message,'danger'));
+}
+
+function guardarProduccion(){
+const sel=document.getElementById('prodTrab');
+const noOrden=document.getElementById('prodNoOrden').value.trim();
+if(!sel.value){toast('Selecciona un trabajador','danger');return;}
+if(!noOrden){toast('NoOrden requerido','danger');return;}
+const tallas=_prodTallas.filter(t=>t.talla&&(t.frentes>0||t.espaldas>0||t.mangas>0));
+if(!tallas.length){toast('Ingresa al menos una talla con piezas','danger');return;}
+const data={fecha:document.getElementById('prodFecha').value,idTrabajador:sel.value,nombreTrabajador:sel.options[sel.selectedIndex].dataset.nombre,noOrden,proceso:document.getElementById('prodProceso').value,observaciones:document.getElementById('prodObs').value,tallas};
+call('registrarProduccion',data).then(r=>{
+if(!r.ok){
+toast(r.errores.join(' | '),'danger');
+return;
+}
+toast('Producción registrada ✓');
+_prodTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
+renderProdTallasBody();
+document.getElementById('prodObs').value='';
+cargarTablaProd();
+}).catch(e=>toast(e.message,'danger'));
+}
+
+function limpiarFormCliente(){
+document.getElementById('clienteId').value='';
+document.getElementById('clienteLogoUrl').value='';
+document.getElementById('clienteNombre').value='';
+document.getElementById('clienteActivo').value='SI';
+document.getElementById('logoPreview').style.display='none';
+document.getElementById('logoFile').value='';
+document.getElementById('formClienteTitle').textContent='Nuevo Cliente';
+}
+_clientes=[];
+
+function limpiarMaquila(){ ['maqId','maqNombre','maqDestino'].forEach(i=>document.getElementById(i).value=''); document.getElementById('maqActivo').value='SI'; document.getElementById('formMaqTitle').textContent='Nueva Maquila'; }
+
+function limpiarModelo(){ ['modId','modNoOrden','modNombre','modFecha','modFotoUrl'].forEach(i=>document.getElementById(i).value=''); document.getElementById('modCliente').value=''; document.getElementById('modMaquila').value=''; document.getElementById('modFotoFile').value=''; document.getElementById('modFotoPreview').style.display='none'; _modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}]; renderModeloTallasBody(); document.getElementById('formModTitle').textContent='Nuevo Modelo'; }
+_modelos=[];
+
+function limpiarTrab(){ ['trabId','trabNombre','trabFotoUrl'].forEach(i=>document.getElementById(i).value=''); document.getElementById('trabActivo').value='SI'; document.getElementById('trabFotoPreview').style.display='none'; document.getElementById('trabFotoFile').value=''; document.getElementById('formTrabTitle').textContent='Nuevo Trabajador'; }
+
+function previewImg(input, previewId, areaId){
+const file=input.files[0];
+if(!file) return;
+const reader=new FileReader();
+reader.onload=e=>{
+const img=document.getElementById(previewId);
+img.src=e.target.result; img.style.display='block';
+};
+reader.readAsDataURL(file);
+}
+async function guardarCliente(){
+const id=document.getElementById('clienteId').value;
+const nombre=document.getElementById('clienteNombre').value.trim();
+if(!nombre){toast('El nombre es requerido','danger');return;}
+const fileInput=document.getElementById('logoFile');
+let logoBase64='';
+if(fileInput.files[0]){
+logoBase64=await fileToBase64(fileInput.files[0]);
+
+}
+const data={id, cliente:nombre, logoBase64, logoUrl:document.getElementById('clienteLogoUrl').value, activo:document.getElementById('clienteActivo').value};
+const fn=id?'editarCliente':'crearCliente';
+const btn=document.querySelector('[onclick="guardarCliente()"]');
+btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Guardando...';
+btn.disabled=true;
+call(fn,data).then(()=>{
+toast(id?'Cliente actualizado':'Cliente creado ✓');
+limpiarFormCliente(); cargarTablaClientes();
+}).catch(e=>toast('Error: '+e.message,'danger'))
+.finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+}
+
+function verResumenEntrada(){
+const no=document.getElementById('resNoOrden').value.trim();
+if(!no){toast('Ingresa un NoOrden','danger');return;}
+document.getElementById('resumenEntradas').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+call('getResumenEntradas',no).then(r=>{
+if(!r.ok){document.getElementById('resumenEntradas').innerHTML=`<div class="empty-state"><i class="fas fa-search"></i><p>${r.msg}</p></div>`;return;}
+document.getElementById('resumenEntradas').innerHTML=`
+<div style="margin-bottom:12px">
+<strong style="font-size:15px">${r.modelo.noOrden}</strong> — ${r.modelo.modelo} | ${r.modelo.nombreCliente}
+<span style="color:var(--text-muted);font-size:13px;margin-left:8px">Entrega: ${fmt(r.modelo.fechaEntrega)}</span>
+</div>
+${r.resumen.map(t=>`
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<strong style="font-size:15px;font-family:'Space Grotesk',sans-serif">Talla ${t.talla}</strong>
+<span class="badge ${t.faltaFrente===0&&t.faltaEspalda===0&&t.faltaManga===0?'badge-success':'badge-warning'}">${t.faltaFrente===0&&t.faltaEspalda===0&&t.faltaManga===0?'✓ Completa':'Pendiente'}</span>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+${['Frentes','Espaldas','Mangas'].map((tipo,idx)=>{
+const esp=[t.esperadoFrente,t.esperadoEspalda,t.esperadoManga][idx];
+const ent=[t.entradaFrente,t.entradaEspalda,t.entradaManga][idx];
+const falt=[t.faltaFrente,t.faltaEspalda,t.faltaManga][idx];
+const pct=esp>0?Math.min(100,Math.round(ent/esp*100)):0;
+const cls=pct>=100?'progress-ok':pct>=50?'progress-warn':'progress-danger';
+return `<div>
+<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--text-muted)">${tipo}</span><span>${ent}/${esp}</span></div>
+<div class="progress"><div class="progress-bar ${cls}" style="width:${pct}%"></div></div>
+${falt>0?`<div style="color:var(--danger);margin-top:3px">Faltan ${falt}</div>`:'<div style="color:var(--success);margin-top:3px">Completo ✓</div>'}
+</div>`;
+}).join('')}
+</div>
+</div>`).join('')}
+<div style="margin-top:16px">
+<div class="card-title" style="margin-bottom:10px">Historial de Entradas</div>
+${r.registros.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Tallas registradas</th></tr></thead><tbody>
+${r.registros.map(reg=>`<tr><td>${fmt(reg.fecha)}</td><td>${reg.nombreTrabajador||'—'}</td><td>${reg.tallas.map(t=>`<span class="badge badge-gray" style="margin:2px">${t.talla}: F${t.frentes} E${t.espaldas} M${t.mangas}</span>`).join('')}</td></tr>`).join('')}
+</tbody></table></div>`:'<p style="color:var(--text-muted);font-size:13px">Sin registros previos</p>'}
+</div>`;
+}).catch(e=>document.getElementById('resumenEntradas').innerHTML=`<div style="color:var(--danger)">${e.message}</div>`);
+}
+let _prodTallas=[];
+
 function renderTablaClientes(data){
 if(!data.length){document.getElementById('tablaClientes').innerHTML='<div class="empty-state"><i class="fas fa-building"></i><p>Sin clientes</p></div>';return;}
 document.getElementById('tablaClientes').innerHTML=`<div class="table-wrap"><table class="table">
@@ -622,6 +839,29 @@ _modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantida
 renderModeloTallasBody();
 cargarTablaModelos();
 });
+}
+
+
+function calcModeloTotal(){
+  var total = (_modeloTallas||[]).reduce(function(s,t){ return s+(+t.cantidad||0); },0);
+  var el = document.getElementById('modeloTotalSuet');
+  if(el) el.textContent = total;
+}
+
+function addSalidaTalla(){ _salidaDet.push({talla:'',bultos:0,cabo:0}); renderSalidaDet(); }
+
+function calcSalidaTotal(){ document.getElementById('salidaTotal').textContent=_salidaDet.reduce((s,d)=>s+(d.bultos*50)+(+d.cabo||0),0); renderSalidaDet(); }
+
+function renderSalidaDet(){
+document.getElementById('salidaDetBody').innerHTML=_salidaDet.map((d,i)=>`
+<tr>
+<td><input class="tinput" style="width:55px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${d.talla}" onchange="_salidaDet[${i}].talla=this.value"></td>
+<td><input class="tinput" type="number" min="0" style="width:70px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${d.bultos}" onchange="_salidaDet[${i}].bultos=+this.value;calcSalidaTotal()"></td>
+<td><input class="tinput" type="number" min="0" style="width:70px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" value="${d.cabo}" onchange="_salidaDet[${i}].cabo=+this.value;calcSalidaTotal()"></td>
+<td style="font-weight:600;color:var(--primary)">${(d.bultos*50)+(+d.cabo||0)}</td>
+<td><button class="btn btn-ghost btn-sm btn-icon" onclick="_salidaDet.splice(${i},1);renderSalidaDet()"><i class="fas fa-times"></i></button></td>
+</tr>`).join('');
+calcSalidaTotal();
 }
 
 function renderModeloTallasBody(){
