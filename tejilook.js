@@ -1474,73 +1474,143 @@ function _repoShowForm(){
   var wrap = document.getElementById('repoFormWrap');
   if(!wrap) return;
   wrap.style.display = 'block';
+  window._repoPrendas = [{talla:'',prenda:'Frentes',cantidad:1,tipo:'Faltante',reviso:''}];
   wrap.innerHTML =
     '<div class="card" style="margin-bottom:16px;border:2px solid var(--primary-light)">'
-      +'<div class="card-header"><div class="card-title">Nueva Reposición</div>'
+      +'<div class="card-header"><div class="card-title">Nueva Reposici\u00f3n</div>'
         +'<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'repoFormWrap\').style.display=\'none\'"><i class="fas fa-times"></i></button>'
       +'</div>'
       +'<div class="form-grid">'
         +'<div class="form-group"><label class="form-label">Fecha *</label>'
           +'<input class="form-control" id="repFecha" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'
         +'<div class="form-group"><label class="form-label">No. Orden *</label>'
-          +'<input class="form-control" id="repOrden" placeholder="Ej: 2529"></div>'
+          +'<input class="form-control" id="repOrden" placeholder="Ej: 2529" oninput="_repoAutoModelo(this.value)"></div>'
         +'<div class="form-group"><label class="form-label">Modelo</label>'
-          +'<input class="form-control" id="repModelo" placeholder="Nombre del modelo"></div>'
+          +'<input class="form-control" id="repModelo" placeholder="Se llena autom\u00e1tico..."></div>'
         +'<div class="form-group"><label class="form-label">Tejedor</label>'
           +'<input class="form-control" id="repTejedor" placeholder="Nombre del tejedor"></div>'
-        +'<div class="form-group"><label class="form-label">Máquina</label>'
-          +'<input class="form-control" id="repMaquina" placeholder="No. de máquina"></div>'
-        +'<div class="form-group"><label class="form-label">Talla</label>'
-          +'<input class="form-control" id="repTalla" placeholder="CH, M, G..."></div>'
-        +'<div class="form-group"><label class="form-label">Prenda</label>'
-          +'<select class="form-control form-select" id="repPrenda">'
-            +'<option value="Frentes">Frentes</option>'
-            +'<option value="Espaldas">Espaldas</option>'
-            +'<option value="Mangas">Mangas</option>'
-          +'</select></div>'
-        +'<div class="form-group"><label class="form-label">Cantidad *</label>'
-          +'<input class="form-control" id="repCantidad" type="number" min="1" value="1"></div>'
-        +'<div class="form-group"><label class="form-label">Tipo *</label>'
-          +'<select class="form-control form-select" id="repTipo">'
-            +'<option value="Faltante">Faltante</option>'
-            +'<option value="Defecto">Defecto</option>'
-          +'</select></div>'
-        +'<div class="form-group"><label class="form-label">Revisó</label>'
-          +'<input class="form-control" id="repReviso" placeholder="Quien revisó"></div>'
+        +'<div class="form-group"><label class="form-label">M\u00e1quina</label>'
+          +'<input class="form-control" id="repMaquina" placeholder="No. de m\u00e1quina"></div>'
       +'</div>'
-      +'<div class="form-group"><label class="form-label">Observación</label>'
+      +'<div style="margin-top:4px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+          +'<div style="font-weight:600;font-size:13px;color:var(--primary)">Prendas a reponer</div>'
+          +'<button class="btn btn-ghost btn-sm" onclick="_repoAddPrenda()"><i class="fas fa-plus"></i> Agregar</button>'
+        +'</div>'
+        +'<div style="overflow-x:auto">'
+          +'<table class="tallas-table" style="width:100%">'
+            +'<thead><tr>'
+              +'<th style="width:80px">Talla</th>'
+              +'<th style="width:110px">Prenda</th>'
+              +'<th style="width:80px">Cantidad</th>'
+              +'<th style="width:110px">Tipo</th>'
+              +'<th>Revis\u00f3</th>'
+              +'<th style="width:36px"></th>'
+            +'</tr></thead>'
+            +'<tbody id="repPrendasBody"></tbody>'
+          +'</table>'
+        +'</div>'
+      +'</div>'
+      +'<div class="form-group" style="margin-top:14px"><label class="form-label">Observaci\u00f3n general</label>'
         +'<textarea class="form-control" id="repObs" rows="2" placeholder="Detalles adicionales..."></textarea></div>'
       +'<div style="display:flex;gap:8px;margin-top:8px">'
-        +'<button class="btn btn-primary" onclick="_repoGuardar()"><i class="fas fa-save"></i> Guardar Reposición</button>'
+        +'<button class="btn btn-primary" onclick="_repoGuardar()"><i class="fas fa-save"></i> Guardar Reposici\u00f3n</button>'
         +'<button class="btn btn-ghost" onclick="document.getElementById(\'repoFormWrap\').style.display=\'none\'">Cancelar</button>'
       +'</div>'
     +'</div>';
+  _repoRenderPrendas();
+}
+
+function _repoAutoModelo(noOrden){
+  if(!noOrden) return;
+  var fuentes = window._modelosCache || window._modelos || [];
+  var found = fuentes.filter(function(m){ return String(m.noOrden)===String(noOrden); });
+  if(found.length){
+    var el = document.getElementById('repModelo');
+    if(el) el.value = found[0].modelo || found[0].nombreModelo || '';
+    return;
+  }
+  call('getModelos').then(function(mods){
+    window._modelosCache = mods;
+    var m = (mods||[]).filter(function(mo){ return String(mo.noOrden)===String(noOrden); });
+    var el = document.getElementById('repModelo');
+    if(el && m.length) el.value = m[0].modelo || '';
+  }).catch(function(){});
+}
+
+function _repoRenderPrendas(){
+  var body = document.getElementById('repPrendasBody');
+  if(!body) return;
+  var prendas = window._repoPrendas || [];
+  body.innerHTML = prendas.map(function(p,i){
+    var disBtn = prendas.length <= 1 ? ' disabled' : '';
+    return '<tr>'
+      +'<td><input class="tinput" style="width:72px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" '
+        +'value="'+p.talla+'" placeholder="CH,M,G..." onchange="window._repoPrendas['+i+'].talla=this.value"></td>'
+      +'<td><select class="tinput" style="width:105px;border:1.5px solid var(--border);border-radius:6px;padding:5px 6px;background:var(--surface);color:var(--text)" '
+        +'onchange="window._repoPrendas['+i+'].prenda=this.value">'
+        +'<option value="Frentes"'+(p.prenda==='Frentes'?' selected':'')+'>Frentes</option>'
+        +'<option value="Espaldas"'+(p.prenda==='Espaldas'?' selected':'')+'>Espaldas</option>'
+        +'<option value="Mangas"'+(p.prenda==='Mangas'?' selected':'')+'>Mangas</option>'
+      +'</select></td>'
+      +'<td><input class="tinput" type="number" min="1" style="width:72px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" '
+        +'value="'+p.cantidad+'" onchange="window._repoPrendas['+i+'].cantidad=+this.value||1"></td>'
+      +'<td><select class="tinput" style="width:105px;border:1.5px solid var(--border);border-radius:6px;padding:5px 6px;background:var(--surface);color:var(--text)" '
+        +'onchange="window._repoPrendas['+i+'].tipo=this.value">'
+        +'<option value="Faltante"'+(p.tipo==='Faltante'?' selected':'')+'>Faltante</option>'
+        +'<option value="Defecto"'+(p.tipo==='Defecto'?' selected':'')+'>Defecto</option>'
+      +'</select></td>'
+      +'<td><input class="tinput" style="width:100%;min-width:80px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text)" '
+        +'value="'+p.reviso+'" placeholder="Qui\u00e9n revis\u00f3" onchange="window._repoPrendas['+i+'].reviso=this.value"></td>'
+      +'<td><button class="btn btn-ghost btn-sm btn-icon" onclick="window._repoPrendas.splice('+i+',1);_repoRenderPrendas()" '
+        +'style="color:var(--danger)"'+disBtn+' title="Quitar">'
+        +'<i class="fas fa-times"></i></button></td>'
+    +'</tr>';
+  }).join('');
+}
+
+function _repoAddPrenda(){
+  var lst = window._repoPrendas || [];
+  var prev = lst.length ? lst[lst.length-1] : {};
+  window._repoPrendas.push({
+    talla:    prev.talla  || '',
+    prenda:   prev.prenda || 'Frentes',
+    cantidad: 1,
+    tipo:     prev.tipo   || 'Faltante',
+    reviso:   prev.reviso || ''
+  });
+  _repoRenderPrendas();
 }
 
 function _repoGuardar(){
   var orden = (document.getElementById('repOrden')||{value:''}).value.trim();
-  var cant  = parseInt((document.getElementById('repCantidad')||{value:'0'}).value)||0;
   if(!orden){ toast('El No. Orden es requerido','danger'); return; }
-  if(cant<1){ toast('La cantidad debe ser al menos 1','danger'); return; }
-  var d = {
+  var prendas = window._repoPrendas || [];
+  if(!prendas.length){ toast('Agrega al menos una prenda','danger'); return; }
+  var base = {
     fecha:        (document.getElementById('repFecha')   ||{value:''}).value,
     noOrden:      orden,
     nombreModelo: (document.getElementById('repModelo')  ||{value:''}).value,
     tejedor:      (document.getElementById('repTejedor') ||{value:''}).value,
     maquina:      (document.getElementById('repMaquina') ||{value:''}).value,
-    talla:        (document.getElementById('repTalla')   ||{value:''}).value,
-    prenda:       (document.getElementById('repPrenda')  ||{value:'Frentes'}).value,
-    cantidad:     cant,
-    tipo:         (document.getElementById('repTipo')    ||{value:'Faltante'}).value,
-    observacion:  (document.getElementById('repObs')     ||{value:''}).value,
-    reviso:       (document.getElementById('repReviso')  ||{value:''}).value
+    observacion:  (document.getElementById('repObs')     ||{value:''}).value
   };
-  call('registrarReposicion', d).then(function(){
-    toast('Reposición registrada \u2705');
+  var promises = prendas.map(function(p){
+    return call('registrarReposicion', Object.assign({}, base, {
+      talla:    p.talla,
+      prenda:   p.prenda,
+      cantidad: p.cantidad || 1,
+      tipo:     p.tipo,
+      reviso:   p.reviso
+    }));
+  });
+  Promise.all(promises).then(function(){
+    var n = prendas.length;
+    toast('Reposici\u00f3n guardada \u2705 (' + n + ' ' + (n===1?'prenda':'prendas') + ')');
+    document.getElementById('repoFormWrap').style.display = 'none';
     renderReposiciones();
   }).catch(function(e){ toast('Error: '+e.message,'danger'); });
 }
-
 
 function dashCargarReposiciones(periodo){
   call('getReposicionesStats', periodo).then(function(stats){
