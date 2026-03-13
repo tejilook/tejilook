@@ -1,7 +1,7 @@
 let currentView='', currentUser=null;
 let _clientes=[], _modelos=[], _maquilas=[], _trabajadores=[]; let isDark = localStorage.getItem('dark')==='1'; if(isDark) document.documentElement.setAttribute('data-theme','dark'); function navigate(view, param){ currentView=view; try{ window.location.hash=view; }catch(e){} document.querySelectorAll('.nav-item,.nav-sub-item').forEach(el=>el.classList.remove('active')); 
 
-const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', trabajadores:'Trabajadores', modelos:'Modelos / Órdenes', entradas:'Entradas', produccion:'Producción Trabajadores', embolsado:'Embolsado', salidas:'Salida a Maquila', buscar:'Buscar por NoOrden', 'ver-entradas':'Ver Entradas', 'ver-produccion':'Ver Producción', 'ver-salidas':'Ver Salidas', usuarios:'Usuarios', bitacora:'Bitácora', configuracion:'Configuración' }; document.getElementById('pageTitle').textContent = titles[view]||view; document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div> Cargando...</div>'; const fns={ dashboard:renderDashboard, clientes:renderClientes, maquilas:renderMaquilas, trabajadores:renderTrabajadores, modelos:renderModelos, entradas:renderEntradas, produccion:renderProduccion, embolsado:renderEmbolsado, salidas:renderSalidas, buscar:()=>renderBuscar(param), 'ver-entradas':renderVerEntradas, 'ver-produccion':renderVerProduccion, 'ver-salidas':renderVerSalidas, usuarios:renderUsuarios, bitacora:renderBitacora, configuracion:renderConfiguracion }; if(fns[view]) fns[view](); else document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-tools"></i><p>Vista en construcción</p></div>'; if(window.innerWidth<768){
+const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', trabajadores:'Trabajadores', modelos:'Modelos / Órdenes', entradas:'Entradas', produccion:'Producción Trabajadores', embolsado:'Embolsado', salidas:'Salida a Maquila', buscar:'Buscar por NoOrden', 'ver-entradas':'Ver Entradas', 'ver-produccion':'Ver Producción', 'ver-salidas':'Ver Salidas', usuarios:'Usuarios', bitacora:'Bitácora', configuracion:'Configuración', reposiciones:'Reposiciones' }; document.getElementById('pageTitle').textContent = titles[view]||view; document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div> Cargando...</div>'; const fns={ dashboard:renderDashboard, clientes:renderClientes, maquilas:renderMaquilas, trabajadores:renderTrabajadores, modelos:renderModelos, entradas:renderEntradas, produccion:renderProduccion, embolsado:renderEmbolsado, salidas:renderSalidas, buscar:()=>renderBuscar(param), 'ver-entradas':renderVerEntradas, 'ver-produccion':renderVerProduccion, 'ver-salidas':renderVerSalidas, usuarios:renderUsuarios, bitacora:renderBitacora, configuracion:renderConfiguracion, reposiciones:renderReposiciones }; if(fns[view]) fns[view](); else document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-tools"></i><p>Vista en construcción</p></div>'; if(window.innerWidth<768){
   document.getElementById('sidebar').classList.remove('open');
   var ov=document.getElementById('sidebarOverlay');
   if(ov) ov.classList.remove('open');
@@ -95,9 +95,9 @@ function dashRender(d){
         +'<div id="chartTrabajadores"></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
-        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Proceso</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 espacio para reposiciones</div>'
-        +'<canvas id="chartProcesos" width="300" height="240"></canvas>'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Reposiciones</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Faltantes vs Defectos '+periodoLabel+'</div>'
+        +'<div id="dashReposChart"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
     +'</div>';
 
@@ -165,9 +165,8 @@ function dashRender(d){
       +'</div></div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  // Dona procesos
-  var procVals = procKeys.map(function(k){ return pa[k]; });
-  dashDrawDonut('chartProcesos', procKeys, procVals, colors);
+  // Reposiciones panel
+  dashCargarReposiciones(window._dashPeriodo||'mes');
 }
 function dashKpi(icon, label, value, color, sub){
   return '<div class="card" style="padding:18px;display:flex;gap:14px;align-items:center">'
@@ -1346,7 +1345,256 @@ function guardarSalida(){
 }
 
 
-function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Buscar por NoOrden</h1><p>Expediente completo: modelo, entradas, producci\u00f3n, embolsado, salidas</p></div></div> <div class=\"card\" style=\"max-width:500px;margin-bottom:20px\"> <div style=\"display:flex;gap:10px\"> <input class=\"form-control\" id=\"buscarNoOrden\" placeholder=\"Ingresa el NoOrden...\" value=\"${noOrdenInicial||''}\"> <button class=\"btn btn-primary\" onclick=\"ejecutarBusqueda()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div id=\"resultadoBusqueda\"></div>`; if(noOrdenInicial) ejecutarBusqueda(); } function ejecutarBusqueda(){ const no=document.getElementById('buscarNoOrden').value.trim(); if(!no){toast('Ingresa un NoOrden','danger');return;} document.getElementById('resultadoBusqueda').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div> Buscando expediente...</div>'; call('buscarNoOrden',no).then(r=>{ if(!r.ok){document.getElementById('resultadoBusqueda').innerHTML=`<div class=\"empty-state\"><i class=\"fas fa-search\"></i><p>${r.msg}</p></div>`;return;} renderExpediente(r,'resultadoBusqueda'); }).catch(e=>document.getElementById('resultadoBusqueda').innerHTML=`<div style=\"color:var(--danger);padding:20px\">${e.message}</div>`); } function abrirExpediente(noOrden){ document.getElementById('expTitle').textContent='Expediente NoOrden: '+noOrden; document.getElementById('expContent').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; openModal('modalExpediente'); call('buscarNoOrden',noOrden).then(r=>{ if(!r.ok){document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">'+r.msg+'</p>';return;} renderExpediente(r,'expContent'); }).catch(e=>{ document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">Error: '+(e.message||e)+'</p>'; }); } function renderExpediente(r, containerId){ const m=r.modelo; const totalEnt=r.entradas&&r.entradas.resumen?r.entradas.resumen.reduce((s,t)=>s+t.entradaFrente,0):0; const totalEmb=(r.embolsado&&Array.isArray(r.embolsado))?r.embolsado.reduce((s,e)=>s+(+e.cantidad||0),0):0; const totalProd=r.produccion?r.produccion.length:0; const totalSalidas=r.salidas?r.salidas.length:0; document.getElementById(containerId).innerHTML=` <div class=\"card\" style=\"margin-bottom:16px\"> <div style=\"display:flex;gap:16px;align-items:flex-start\"> ${m.foto?'<img src=\"'+m.foto+'\" style=\"width:88px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid var(--border)\" onerror=\"this.style.display=\\\'none\\\'\">':''} <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;flex:1\"> <div><div class=\"form-label\">NoOrden</div><strong style=\"font-size:18px;font-family:'Space Grotesk',sans-serif;color:var(--primary)\">${m.noOrden}</strong></div> <div><div class=\"form-label\">Modelo</div><strong>${m.modelo}</strong></div> <div><div class=\"form-label\">Cliente</div>${m.nombreCliente}</div> <div><div class=\"form-label\">Maquila</div>${m.nombreMaquila||'\u2014'}</div> <div><div class=\"form-label\">F.Entrega</div>${fmt(m.fechaEntrega)}</div> </div> </div> <div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:16px\"> ${m.tallas?m.tallas.map(t=>`<div class=\"talla-chip\"><div class=\"tc-talla\">${t.talla}</div><div class=\"tc-sub\">${t.cantidadSueter} su\u00e9ter</div><div class=\"tc-sub\" style=\"color:var(--text-light)\">F${t.frentes} E${t.espaldas} M${t.mangas}</div></div>`).join(''):''} </div> </div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px\"> <div class=\"stat-card\" style=\"--stat-color:var(--info);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-ramp-box\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEnt}</div><div class=\"stat-label\">Piezas Entrada</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--success);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-person-digging\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalProd}</div><div class=\"stat-label\">Reg. Producci\u00f3n</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--warning);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-box-open\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEmb}</div><div class=\"stat-label\">Embolsados</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--primary);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-fast\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalSalidas}</div><div class=\"stat-label\">Salidas</div></div></div> </div> ${r.entradas&&r.entradas.resumen&&r.entradas.resumen.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-ramp-box\"></i> Entradas por Talla</div> ${r.entradas.resumen.map(t=>{ const pctF=t.esperadoFrente>0?Math.min(100,Math.round(t.entradaFrente/t.esperadoFrente*100)):0; return `<div style=\"background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px\"> <div style=\"display:flex;justify-content:space-between;margin-bottom:8px\"><strong>Talla ${t.talla}</strong><span class=\"${t.faltaFrente===0?'badge badge-success':'badge badge-warning'}\">${t.faltaFrente===0?'Completa':'Pendiente'}</span></div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px\"> <div>Frentes: ${t.entradaFrente}/${t.esperadoFrente}<div class=\"progress\"><div class=\"progress-bar ${pctF>=100?'progress-ok':'progress-warn'}\" style=\"width:${pctF}%\"></div></div></div> <div>Espaldas: ${t.entradaEspalda}/${t.esperadoEspalda}</div> <div>Mangas: ${t.entradaManga}/${t.esperadoManga}</div> </div></div>`; }).join('')} </div>`:''  } ${r.produccion&&r.produccion.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-person-digging\"></i> Producci\u00f3n Registrada</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${r.produccion.map(p=>`<tr><td>${fmt(p.fecha)}</td><td>${p.trabajador}</td><td><span class=\"badge badge-info\">${p.proceso}</span></td><td>${(p.tallas||[]).map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"color:var(--text-muted)\">${p.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div> </div>`:''} ${r.embolsado&&r.embolsado.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-box-open\"></i> Embolsado</div> <div style=\"display:flex;flex-wrap:wrap;gap:8px\">${r.embolsado.map(e=>`<span class=\"badge badge-warning\" style=\"font-size:13px;padding:6px 12px\">${e.talla}: ${e.cantidad}</span>`).join('')}</div> </div>`:''} ${r.salidas&&r.salidas.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-fast\"></i> Salidas a Maquila</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Maquila</th><th>Tallas enviadas</th><th>Formato</th></tr></thead><tbody> ${r.salidas.map(s=>`<tr><td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td>${s.detalle?s.detalle.map(d=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${d.talla}:${d.total}</span>`).join(''):'\u2014'}</td><td><button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i></button></td></tr>`).join('')} </tbody></table></div> </div>`:''}`; } function renderVerEntradas(){
+function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Buscar por NoOrden</h1><p>Expediente completo: modelo, entradas, producci\u00f3n, embolsado, salidas</p></div></div> <div class=\"card\" style=\"max-width:500px;margin-bottom:20px\"> <div style=\"display:flex;gap:10px\"> <input class=\"form-control\" id=\"buscarNoOrden\" placeholder=\"Ingresa el NoOrden...\" value=\"${noOrdenInicial||''}\"> <button class=\"btn btn-primary\" onclick=\"ejecutarBusqueda()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div id=\"resultadoBusqueda\"></div>`; if(noOrdenInicial) ejecutarBusqueda(); } function ejecutarBusqueda(){ const no=document.getElementById('buscarNoOrden').value.trim(); if(!no){toast('Ingresa un NoOrden','danger');return;} document.getElementById('resultadoBusqueda').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div> Buscando expediente...</div>'; call('buscarNoOrden',no).then(r=>{ if(!r.ok){document.getElementById('resultadoBusqueda').innerHTML=`<div class=\"empty-state\"><i class=\"fas fa-search\"></i><p>${r.msg}</p></div>`;return;} renderExpediente(r,'resultadoBusqueda'); }).catch(e=>document.getElementById('resultadoBusqueda').innerHTML=`<div style=\"color:var(--danger);padding:20px\">${e.message}</div>`); } function abrirExpediente(noOrden){ document.getElementById('expTitle').textContent='Expediente NoOrden: '+noOrden; document.getElementById('expContent').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; openModal('modalExpediente'); call('buscarNoOrden',noOrden).then(r=>{ if(!r.ok){document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">'+r.msg+'</p>';return;} renderExpediente(r,'expContent'); }).catch(e=>{ document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">Error: '+(e.message||e)+'</p>'; }); } function renderExpediente(r, containerId){ const m=r.modelo; const totalEnt=r.entradas&&r.entradas.resumen?r.entradas.resumen.reduce((s,t)=>s+t.entradaFrente,0):0; const totalEmb=(r.embolsado&&Array.isArray(r.embolsado))?r.embolsado.reduce((s,e)=>s+(+e.cantidad||0),0):0; const totalProd=r.produccion?r.produccion.length:0; const totalSalidas=r.salidas?r.salidas.length:0; document.getElementById(containerId).innerHTML=` <div class=\"card\" style=\"margin-bottom:16px\"> <div style=\"display:flex;gap:16px;align-items:flex-start\"> ${m.foto?'<img src=\"'+m.foto+'\" style=\"width:88px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid var(--border)\" onerror=\"this.style.display=\\\'none\\\'\">':''} <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;flex:1\"> <div><div class=\"form-label\">NoOrden</div><strong style=\"font-size:18px;font-family:'Space Grotesk',sans-serif;color:var(--primary)\">${m.noOrden}</strong></div> <div><div class=\"form-label\">Modelo</div><strong>${m.modelo}</strong></div> <div><div class=\"form-label\">Cliente</div>${m.nombreCliente}</div> <div><div class=\"form-label\">Maquila</div>${m.nombreMaquila||'\u2014'}</div> <div><div class=\"form-label\">F.Entrega</div>${fmt(m.fechaEntrega)}</div> </div> </div> <div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:16px\"> ${m.tallas?m.tallas.map(t=>`<div class=\"talla-chip\"><div class=\"tc-talla\">${t.talla}</div><div class=\"tc-sub\">${t.cantidadSueter} su\u00e9ter</div><div class=\"tc-sub\" style=\"color:var(--text-light)\">F${t.frentes} E${t.espaldas} M${t.mangas}</div></div>`).join(''):''} </div> </div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px\"> <div class=\"stat-card\" style=\"--stat-color:var(--info);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-ramp-box\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEnt}</div><div class=\"stat-label\">Piezas Entrada</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--success);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-person-digging\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalProd}</div><div class=\"stat-label\">Reg. Producci\u00f3n</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--warning);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-box-open\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEmb}</div><div class=\"stat-label\">Embolsados</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--primary);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-fast\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalSalidas}</div><div class=\"stat-label\">Salidas</div></div></div> </div> ${r.entradas&&r.entradas.resumen&&r.entradas.resumen.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-ramp-box\"></i> Entradas por Talla</div> ${r.entradas.resumen.map(t=>{ const pctF=t.esperadoFrente>0?Math.min(100,Math.round(t.entradaFrente/t.esperadoFrente*100)):0; return `<div style=\"background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px\"> <div style=\"display:flex;justify-content:space-between;margin-bottom:8px\"><strong>Talla ${t.talla}</strong><span class=\"${t.faltaFrente===0?'badge badge-success':'badge badge-warning'}\">${t.faltaFrente===0?'Completa':'Pendiente'}</span></div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px\"> <div>Frentes: ${t.entradaFrente}/${t.esperadoFrente}<div class=\"progress\"><div class=\"progress-bar ${pctF>=100?'progress-ok':'progress-warn'}\" style=\"width:${pctF}%\"></div></div></div> <div>Espaldas: ${t.entradaEspalda}/${t.esperadoEspalda}</div> <div>Mangas: ${t.entradaManga}/${t.esperadoManga}</div> </div></div>`; }).join('')} </div>`:''  } ${r.produccion&&r.produccion.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-person-digging\"></i> Producci\u00f3n Registrada</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${r.produccion.map(p=>`<tr><td>${fmt(p.fecha)}</td><td>${p.trabajador}</td><td><span class=\"badge badge-info\">${p.proceso}</span></td><td>${(p.tallas||[]).map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"color:var(--text-muted)\">${p.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div> </div>`:''} ${r.embolsado&&r.embolsado.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-box-open\"></i> Embolsado</div> <div style=\"display:flex;flex-wrap:wrap;gap:8px\">${r.embolsado.map(e=>`<span class=\"badge badge-warning\" style=\"font-size:13px;padding:6px 12px\">${e.talla}: ${e.cantidad}</span>`).join('')}</div> </div>`:''} ${r.salidas&&r.salidas.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-fast\"></i> Salidas a Maquila</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Maquila</th><th>Tallas enviadas</th><th>Formato</th></tr></thead><tbody> ${r.salidas.map(s=>`<tr><td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td>${s.detalle?s.detalle.map(d=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${d.talla}:${d.total}</span>`).join(''):'\u2014'}</td><td><button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i></button></td></tr>`).join('')} </tbody></table></div> </div>`:''}`; } 
+// ══════════════════════════════════════════════════════════════
+// MÓDULO REPOSICIONES
+// ══════════════════════════════════════════════════════════════
+
+var _reposAll = [];
+
+function renderReposiciones(){
+  document.getElementById('main').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  call('getReposiciones').then(function(data){
+    _reposAll = data || [];
+    document.getElementById('main').innerHTML =
+      '<div class="page-header">'
+        +'<div><h1>Reposiciones</h1><p>Faltantes y defectos de producción</p></div>'
+        +'<button class="btn btn-primary" onclick="_repoShowForm()"><i class="fas fa-plus"></i> Nueva Reposición</button>'
+      +'</div>'
+      +'<div id="repoFormWrap" style="display:none"></div>'
+      +'<div class="card" style="margin-top:16px">'
+        +'<div class="toolbar" style="gap:8px;flex-wrap:wrap">'
+          +'<div class="search-bar" style="flex:1;min-width:180px;max-width:300px">'
+            +'<i class="fas fa-search"></i>'
+            +'<input id="repoBuscar" placeholder="Buscar orden, tejedor..." oninput="_repoFiltrar()" type="text">'
+          +'</div>'
+          +'<select class="form-control form-select" id="repoFiltTipo" style="width:150px" onchange="_repoFiltrar()">'
+            +'<option value="">Todos los tipos</option>'
+            +'<option value="Faltante">Faltantes</option>'
+            +'<option value="Defecto">Defectos</option>'
+          +'</select>'
+          +'<select class="form-control form-select" id="repoFiltEst" style="width:160px" onchange="_repoFiltrar()">'
+            +'<option value="">Todos los estatus</option>'
+            +'<option value="Se pidió">Se pidió</option>'
+            +'<option value="En proceso">En proceso</option>'
+            +'<option value="Entregada">Entregada</option>'
+          +'</select>'
+        +'</div>'
+        +'<div id="repoTabla"></div>'
+      +'</div>';
+    _repoFiltrar();
+  });
+}
+
+function _repoFiltrar(){
+  var q   = (document.getElementById('repoBuscar')   || {value:''}).value.toLowerCase();
+  var tipo = (document.getElementById('repoFiltTipo') || {value:''}).value;
+  var est  = (document.getElementById('repoFiltEst')  || {value:''}).value;
+  var data = _reposAll.filter(function(r){
+    var match = true;
+    if(q)    match = match && (r.noOrden.toLowerCase().includes(q) || r.tejedor.toLowerCase().includes(q) || r.nombreModelo.toLowerCase().includes(q));
+    if(tipo) match = match && r.tipo === tipo;
+    if(est)  match = match && r.estatus === est;
+    return match;
+  });
+  _repoRenderTabla(data);
+}
+
+var _ESTATUS_BADGE = {
+  'Se pidió':  '<span class="badge" style="background:#fef3c7;color:#92400e">🔔 Se pidió</span>',
+  'En proceso':'<span class="badge" style="background:#e0f2fe;color:#0369a1">⚙️ En proceso</span>',
+  'Entregada': '<span class="badge" style="background:#d1fae5;color:#065f46">✅ Entregada</span>'
+};
+var _TIPO_BADGE = {
+  'Faltante': '<span class="badge badge-warning">Faltante</span>',
+  'Defecto':  '<span class="badge badge-danger">Defecto</span>'
+};
+var _PRENDA_BADGE = {
+  'Frentes':  '<span class="badge badge-info">F</span>',
+  'Espaldas': '<span class="badge" style="background:#ede9fe;color:#5b21b6">E</span>',
+  'Mangas':   '<span class="badge" style="background:#fce7f3;color:#9d174d">M</span>'
+};
+
+function _repoRenderTabla(data){
+  var el = document.getElementById('repoTabla');
+  if(!el) return;
+  if(!data.length){
+    el.innerHTML='<div class="empty-state"><i class="fas fa-rotate-left"></i><p>Sin reposiciones</p></div>';
+    return;
+  }
+  var rows = data.map(function(r){
+    var nextEst = r.estatus==='Se pidió' ? 'En proceso' : r.estatus==='En proceso' ? 'Entregada' : null;
+    var btnAvanzar = nextEst
+      ? '<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_repoAvanzar(\''+r.id+'\',\''+nextEst+'\')">'
+          +'<i class="fas fa-arrow-right"></i> '+nextEst
+        +'</button>'
+      : '';
+    return '<tr>'
+      +'<td>'+fmt(r.fecha)+'</td>'
+      +'<td><strong>'+r.noOrden+'</strong>'+(r.nombreModelo?'<br><span style="font-size:11px;color:var(--text-muted)">'+r.nombreModelo+'</span>':'')+'</td>'
+      +'<td>'+r.tejedor+(r.maquina?'<br><span style="font-size:11px;color:var(--text-muted)">Máq: '+r.maquina+'</span>':'')+'</td>'
+      +'<td>'+r.talla+' '+(_PRENDA_BADGE[r.prenda]||r.prenda)+'</td>'
+      +'<td style="text-align:center"><strong>'+r.cantidad+'</strong></td>'
+      +'<td>'+(_TIPO_BADGE[r.tipo]||r.tipo)+'</td>'
+      +'<td>'+(r.observacion||'—')+'</td>'
+      +'<td>'+(_ESTATUS_BADGE[r.estatus]||r.estatus)+'</td>'
+      +'<td style="white-space:nowrap">'
+        +btnAvanzar+' '
+        +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="_repoEliminar(\''+r.id+'\')"><i class="fas fa-trash"></i></button>'
+      +'</td>'
+    +'</tr>';
+  }).join('');
+  el.innerHTML =
+    '<div class="table-wrap"><table class="table" style="font-size:13px">'
+    +'<thead><tr>'
+      +'<th>Fecha</th><th>Orden / Modelo</th><th>Tejedor / Máq.</th>'
+      +'<th>Talla / Prenda</th><th style="text-align:center">Cant.</th>'
+      +'<th>Tipo</th><th>Observación</th><th>Estatus</th><th>Acc.</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table></div>';
+}
+
+function _repoAvanzar(id, nuevoEst){
+  call('cambiarEstatusReposicion', id, nuevoEst).then(function(){
+    toast('Estatus actualizado a: '+nuevoEst);
+    renderReposiciones();
+  }).catch(function(){ toast('Error al cambiar estatus','danger'); });
+}
+
+function _repoEliminar(id){
+  if(!confirm('¿Eliminar esta reposición?')) return;
+  call('eliminarReposicion', id).then(function(){
+    toast('Reposición eliminada','warning');
+    renderReposiciones();
+  });
+}
+
+function _repoShowForm(){
+  var wrap = document.getElementById('repoFormWrap');
+  if(!wrap) return;
+  wrap.style.display = 'block';
+  wrap.innerHTML =
+    '<div class="card" style="margin-bottom:16px;border:2px solid var(--primary-light)">'
+      +'<div class="card-header"><div class="card-title">Nueva Reposición</div>'
+        +'<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'repoFormWrap\').style.display=\'none\'"><i class="fas fa-times"></i></button>'
+      +'</div>'
+      +'<div class="form-grid">'
+        +'<div class="form-group"><label class="form-label">Fecha *</label>'
+          +'<input class="form-control" id="repFecha" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'
+        +'<div class="form-group"><label class="form-label">No. Orden *</label>'
+          +'<input class="form-control" id="repOrden" placeholder="Ej: 2529"></div>'
+        +'<div class="form-group"><label class="form-label">Modelo</label>'
+          +'<input class="form-control" id="repModelo" placeholder="Nombre del modelo"></div>'
+        +'<div class="form-group"><label class="form-label">Tejedor</label>'
+          +'<input class="form-control" id="repTejedor" placeholder="Nombre del tejedor"></div>'
+        +'<div class="form-group"><label class="form-label">Máquina</label>'
+          +'<input class="form-control" id="repMaquina" placeholder="No. de máquina"></div>'
+        +'<div class="form-group"><label class="form-label">Talla</label>'
+          +'<input class="form-control" id="repTalla" placeholder="CH, M, G..."></div>'
+        +'<div class="form-group"><label class="form-label">Prenda</label>'
+          +'<select class="form-control form-select" id="repPrenda">'
+            +'<option value="Frentes">Frentes</option>'
+            +'<option value="Espaldas">Espaldas</option>'
+            +'<option value="Mangas">Mangas</option>'
+          +'</select></div>'
+        +'<div class="form-group"><label class="form-label">Cantidad *</label>'
+          +'<input class="form-control" id="repCantidad" type="number" min="1" value="1"></div>'
+        +'<div class="form-group"><label class="form-label">Tipo *</label>'
+          +'<select class="form-control form-select" id="repTipo">'
+            +'<option value="Faltante">Faltante</option>'
+            +'<option value="Defecto">Defecto</option>'
+          +'</select></div>'
+        +'<div class="form-group"><label class="form-label">Revisó</label>'
+          +'<input class="form-control" id="repReviso" placeholder="Quien revisó"></div>'
+      +'</div>'
+      +'<div class="form-group"><label class="form-label">Observación</label>'
+        +'<textarea class="form-control" id="repObs" rows="2" placeholder="Detalles adicionales..."></textarea></div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px">'
+        +'<button class="btn btn-primary" onclick="_repoGuardar()"><i class="fas fa-save"></i> Guardar Reposición</button>'
+        +'<button class="btn btn-ghost" onclick="document.getElementById(\'repoFormWrap\').style.display=\'none\'">Cancelar</button>'
+      +'</div>'
+    +'</div>';
+}
+
+function _repoGuardar(){
+  var orden = (document.getElementById('repOrden')||{value:''}).value.trim();
+  var cant  = parseInt((document.getElementById('repCantidad')||{value:'0'}).value)||0;
+  if(!orden){ toast('El No. Orden es requerido','danger'); return; }
+  if(cant<1){ toast('La cantidad debe ser al menos 1','danger'); return; }
+  var d = {
+    fecha:        (document.getElementById('repFecha')   ||{value:''}).value,
+    noOrden:      orden,
+    nombreModelo: (document.getElementById('repModelo')  ||{value:''}).value,
+    tejedor:      (document.getElementById('repTejedor') ||{value:''}).value,
+    maquina:      (document.getElementById('repMaquina') ||{value:''}).value,
+    talla:        (document.getElementById('repTalla')   ||{value:''}).value,
+    prenda:       (document.getElementById('repPrenda')  ||{value:'Frentes'}).value,
+    cantidad:     cant,
+    tipo:         (document.getElementById('repTipo')    ||{value:'Faltante'}).value,
+    observacion:  (document.getElementById('repObs')     ||{value:''}).value,
+    reviso:       (document.getElementById('repReviso')  ||{value:''}).value
+  };
+  call('registrarReposicion', d).then(function(){
+    toast('Reposición registrada \u2705');
+    renderReposiciones();
+  }).catch(function(e){ toast('Error: '+e.message,'danger'); });
+}
+
+
+function dashCargarReposiciones(periodo){
+  call('getReposicionesStats', periodo).then(function(stats){
+    var el = document.getElementById('dashReposChart');
+    if(!el) return;
+    var tf = stats.totalFaltantes || 0;
+    var td = stats.totalDefectos  || 0;
+    var maxV = Math.max(tf, td, 1);
+    var pf = Math.round(tf/maxV*100);
+    var pd = Math.round(td/maxV*100);
+    var est = stats.porEstatus || {};
+    el.innerHTML =
+      '<div style="margin-bottom:16px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:13px;font-weight:600">⚠️ Faltantes</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--warning)">'+tf+' pzs ('+stats.countFaltantes+' reg.)</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pf+'%;background:var(--warning);border-radius:6px;transition:width .5s"></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="margin-bottom:20px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:13px;font-weight:600">❌ Defectos</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--danger)">'+td+' pzs ('+stats.countDefectos+' reg.)</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pd+'%;background:var(--danger);border-radius:6px;transition:width .5s"></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="border-top:1px solid var(--border);padding-top:12px">'
+        +'<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">ESTATUS</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+          +'<div style="flex:1;text-align:center;background:var(--surface2);border-radius:8px;padding:8px">'
+            +'<div style="font-size:18px;font-weight:700;color:#92400e">'+(est['Se pidió']||0)+'</div>'
+            +'<div style="font-size:11px;color:var(--text-muted)">Se pidió</div>'
+          +'</div>'
+          +'<div style="flex:1;text-align:center;background:var(--surface2);border-radius:8px;padding:8px">'
+            +'<div style="font-size:18px;font-weight:700;color:#0369a1">'+(est['En proceso']||0)+'</div>'
+            +'<div style="font-size:11px;color:var(--text-muted)">En proceso</div>'
+          +'</div>'
+          +'<div style="flex:1;text-align:center;background:var(--surface2);border-radius:8px;padding:8px">'
+            +'<div style="font-size:18px;font-weight:700;color:#065f46">'+(est['Entregada']||0)+'</div>'
+            +'<div style="font-size:11px;color:var(--text-muted)">Entregadas</div>'
+          +'</div>'
+        +'</div>'
+      +'</div>';
+  }).catch(function(){
+    var el = document.getElementById('dashReposChart');
+    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos de reposiciones</div>';
+  });
+}
+
+function renderVerEntradas(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   // Cargar modelos para lookup de nombre
   Promise.all([call('getEntradas'), call('getModelos')]).then(function(res){
@@ -1970,9 +2218,17 @@ function _cargarSistema(user){
   document.getElementById('userRole').textContent   = user.rol;
   document.getElementById('userAvatar').textContent = user.nombre.charAt(0).toUpperCase();
   var isSu = user.rol === 'Superusuario';
+  var isSupervisor = user.rol === 'Supervisor';
   document.querySelectorAll('.nav-sistema').forEach(function(el){
     el.style.display = isSu ? '' : 'none';
   });
+  // Supervisor: solo ve sección Calidad, el resto oculto
+  if(isSupervisor){
+    document.querySelectorAll('.nav-section').forEach(function(s){
+      if(!s.classList.contains('nav-calidad')) s.style.display='none';
+    });
+    setTimeout(function(){ navigate('reposiciones'); }, 100);
+  }
   call('getConfig').then(function(cfg){
     window._sysConfig = cfg;
     var bn = document.querySelector('.brand-text .name');
