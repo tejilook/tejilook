@@ -72,7 +72,7 @@ function dashRender(d){
 
   // ── KPIs ────────────────────────────────────────────────────────────────
   var kpiHtml =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">'
+    '<div class="dash-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">'
     // 1. Suéteres enviados a maquila
     +dashKpi('fas fa-shirt','Su\u00e9teres procesados '+periodoLabel, totalSueteresSalidas, 'var(--primary)', 'Total enviados a maquila')
     // 2. Top trabajador general
@@ -88,7 +88,7 @@ function dashRender(d){
 
   // ── Fila 1: barras trabajadores + espacio reservado (reposiciones) ────────
   var fila1 =
-    '<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
+    '<div class="dash-fila1" style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M por persona</div>'
@@ -103,7 +103,7 @@ function dashRender(d){
 
   // ── Fila 2: maquilas + tabla comparativa ────────────────────────────────
   var fila2 =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
+    '<div class="dash-fila2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
@@ -169,17 +169,21 @@ function dashRender(d){
   dashCargarReposiciones(window._dashPeriodo||'mes');
 }
 function dashKpi(icon, label, value, color, sub){
-  return '<div class="card" style="padding:18px;display:flex;gap:14px;align-items:center">'
-    +'<div style="width:44px;height:44px;border-radius:12px;background:'+color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-      +'<i class="'+icon+'" style="color:'+color+';font-size:18px"></i>'
+  var valStr = String(value);
+  // Shrink font for long values (names etc)
+  var valSize = valStr.length > 14 ? '13px' : valStr.length > 8 ? '16px' : '20px';
+  return '<div class="card" style="padding:14px;display:flex;gap:12px;align-items:center;min-width:0">'
+    +'<div style="width:40px;height:40px;border-radius:10px;background:'+color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      +'<i class="'+icon+'" style="color:'+color+';font-size:17px"></i>'
     +'</div>'
-    +'<div style="min-width:0">'
-      +'<div style="font-size:20px;font-weight:700;font-family:\'Space Grotesk\',sans-serif;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+value+'</div>'
-      +'<div style="font-size:12px;color:var(--text-muted);margin-top:1px">'+label+'</div>'
-      +(sub?'<div style="font-size:11px;color:'+color+';margin-top:2px">'+sub+'</div>':'')
+    +'<div style="min-width:0;flex:1;overflow:hidden">'
+      +'<div style="font-size:'+valSize+';font-weight:700;font-family:\'Space Grotesk\',sans-serif;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+valStr+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>'
+      +(sub?'<div style="font-size:11px;color:'+color+';margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div>':'')
     +'</div>'
   +'</div>';
 }
+
 
 function dashDrawDonut(canvasId, labels, values, colors){
   var canvas = document.getElementById(canvasId);
@@ -555,7 +559,7 @@ verResumenEntrada();
 }).catch(e=>toast(e.message,'danger'));
 }
 
-function guardarMaquila(){ const id=document.getElementById('maqId').value; const nombre=document.getElementById('maqNombre').value.trim(); if(!nombre){toast('Nombre requerido','danger');return;} const data={id,maquila:nombre,destino:document.getElementById('maqDestino').value,activo:document.getElementById('maqActivo').value}; call(id?'editarMaquila':'crearMaquila',data).then(()=>{toast('Guardado ✓');limpiarMaquila();cargarTablaMaquilas();}).catch(e=>toast(e.message,'danger')); }
+function guardarMaquila(){ const id=document.getElementById('maqId').value; const nombre=document.getElementById('maqNombre').value.trim(); if(!nombre){toast('Nombre requerido','danger');return;} const data={id,maquila:nombre,destino:document.getElementById('maqDestino').value,activo:document.getElementById('maqActivo').value}; call(id?'editarMaquila':'crearMaquila',data).then(()=>{closeModal('modalMaquila');toast('Maquila guardada ✓');limpiarMaquila();cargarTablaMaquilas();}).catch(e=>toast(e.message,'danger')); }
 
 async function guardarModelo(){
 const id=document.getElementById('modId').value;
@@ -773,7 +777,7 @@ if(fileInput.files[0]) fotoBase64=await fileToBase64(fileInput.files[0]);
 const data={id,nombre,puesto:document.getElementById('trabPuesto').value,fotoBase64,fotoUrl:document.getElementById('trabFotoUrl').value,activo:document.getElementById('trabActivo').value};
 const btn=document.querySelector('[onclick="guardarTrabajador()"]');
 btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>';btn.disabled=true;
-call(id?'editarTrabajador':'crearTrabajador',data).then(()=>{toast('Guardado ✓');limpiarTrab();cargarTablaTrabs();}).catch(e=>toast(e.message,'danger')).finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+call(id?'editarTrabajador':'crearTrabajador',data).then(()=>{closeModal('modalTrabajador');toast('Trabajador guardado ✓');limpiarTrab();cargarTablaTrabs();}).catch(e=>toast(e.message,'danger')).finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
 }
 
 function renderModelos(){
@@ -2324,7 +2328,7 @@ window.addEventListener('DOMContentLoaded',function(){
   if(isDark) document.getElementById('darkIcon').className='fas fa-sun';
   // Check session storage for logged-in user
   var stored = null;
-  try { stored = JSON.parse(sessionStorage.getItem('tejilook_user')); } catch(e){}
+  try { stored = JSON.parse(localStorage.getItem('tejilook_user')); } catch(e){}
   if(stored && stored.id){
     _initApp(stored);
   } else {
@@ -2337,52 +2341,106 @@ function _showLogin(){
   document.getElementById('topbar').style.display='none';
   document.getElementById('main').style.cssText='margin:0;padding:0;min-height:100vh';
   document.getElementById('main').innerHTML=`
-    <div style="
+    <style>
+    .login-wrap{
       min-height:100vh;
       background:linear-gradient(135deg,#c026d3 0%,#7c3aed 40%,#ec4899 100%);
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      display:flex;align-items:center;justify-content:center;
       font-family:'DM Sans',sans-serif;
-      padding:32px;
-    ">
-      <!-- Card exterior: contiene imagen + login -->
-      <div style="
-        position:relative;
-        width:780px;
-        height:480px;
-        border-radius:24px;
-        overflow:hidden;
-        box-shadow:0 40px 100px rgba(0,0,0,0.5);
-        flex-shrink:0;
-      ">
-        <!-- Imagen de fondo completa -->
-        <img src='https://drive.google.com/thumbnail?id=1qMi20i3-avWmKa0IgV4ufu4hNdYfmYDx&sz=w1200'
-          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;">
+      padding:16px;
+      box-sizing:border-box;
+    }
+    /* Card contenedor: imagen + formulario lado a lado en pantallas grandes */
+    .login-card{
+      position:relative;
+      width:100%;
+      max-width:780px;
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow:0 40px 100px rgba(0,0,0,0.5);
+      display:flex;
+      min-height:420px;
+    }
+    /* Imagen: ocupa lado derecho en desktop, queda de fondo en móvil */
+    .login-img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:center top;
+    }
+    /* Panel del formulario */
+    .login-panel{
+      position:relative;
+      z-index:2;
+      width:280px;
+      min-width:260px;
+      flex-shrink:0;
+      background:rgba(22,14,36,0.78);
+      backdrop-filter:blur(24px);
+      -webkit-backdrop-filter:blur(24px);
+      border-right:1px solid rgba(255,255,255,0.08);
+      padding:36px 28px;
+      box-sizing:border-box;
+    }
+    /* En móvil: el panel ocupa todo el ancho, la imagen queda atrás con overlay */
+    @media(max-width:560px){
+      .login-card{ min-height:100svh; border-radius:0; max-width:100%; }
+      .login-panel{
+        width:100%;
+        background:rgba(22,14,36,0.85);
+        border-right:none;
+        padding:40px 24px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+      }
+      .login-wrap{ padding:0; }
+    }
+    /* Tablet intermedio */
+    @media(min-width:561px) and (max-width:700px){
+      .login-card{ max-width:420px; }
+      .login-panel{ width:100%; border-right:none; background:rgba(22,14,36,0.82); }
+    }
+    .login-input{
+      width:100%;background:transparent;border:none;
+      border-bottom:1.5px solid rgba(255,255,255,0.2);
+      padding:6px 4px 6px 22px;
+      color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;
+      outline:none;transition:border-color .2s;caret-color:#a78bfa;
+      box-sizing:border-box;
+    }
+    .login-input:focus{ border-bottom-color:rgba(167,139,250,0.9); }
+    .login-btn{
+      width:100%;
+      background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+      border:none;border-radius:50px;
+      color:#fff;font-family:'Space Grotesk',sans-serif;
+      font-size:14px;font-weight:700;
+      padding:13px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:all .2s;
+      box-shadow:0 6px 20px rgba(37,99,235,0.4);
+      letter-spacing:0.3px;
+      box-sizing:border-box;
+    }
+    .login-btn:active{ transform:scale(.98); }
+    </style>
+    <div class="login-wrap">
+      <div class="login-card">
+        <!-- Imagen fondo/lado -->
+        <img class="login-img"
+          src='https://drive.google.com/thumbnail?id=1qMi20i3-avWmKa0IgV4ufu4hNdYfmYDx&sz=w1200'>
 
-        <!-- Login card encima, lado izquierdo -->
-        <div style="
-          position:absolute;
-          top:50%;left:44px;
-          transform:translateY(-50%);
-          width:260px;
-          background:rgba(22,14,36,0.72);
-          backdrop-filter:blur(24px);
-          -webkit-backdrop-filter:blur(24px);
-          border:1px solid rgba(255,255,255,0.12);
-          border-radius:18px;
-          padding:32px 28px;
-          box-shadow:0 16px 48px rgba(0,0,0,0.4);
-        ">
-          <!-- Logo -->
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:26px">
+        <!-- Panel formulario -->
+        <div class="login-panel">
+          <!-- Logo + nombre -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
             <div id="loginLogoBox" style="
-              width:34px;height:34px;flex-shrink:0;
+              width:36px;height:36px;flex-shrink:0;
               background:linear-gradient(135deg,#7c3aed,#ec4899);
-              border-radius:9px;
-              display:flex;align-items:center;justify-content:center;
-              overflow:hidden;
-            ">
+              border-radius:9px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="3" fill="white" opacity="0.95"/>
                 <rect x="11" y="2"  width="2" height="7" rx="1" fill="white" opacity="0.8"/>
@@ -2393,69 +2451,40 @@ function _showLogin(){
             </div>
             <div id="loginSisNombre" style="
               font-family:'Space Grotesk',sans-serif;
-              font-weight:700;font-size:19px;
-              color:#fff;letter-spacing:-0.3px;
-            ">TejiLook</div>
+              font-weight:700;font-size:20px;
+              color:#fff;letter-spacing:-0.3px;">TejiLook</div>
           </div>
 
           <!-- Usuario -->
-          <div style="margin-bottom:16px">
+          <div style="margin-bottom:18px">
             <div style="font-size:10px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:8px">Usuario</div>
             <div style="position:relative;display:flex;align-items:center">
               <i class="fas fa-user" style="position:absolute;left:0;color:rgba(255,255,255,0.3);font-size:12px;pointer-events:none"></i>
-              <input id="loginUser" autocomplete="username" style="
-                width:100%;background:transparent;border:none;
-                border-bottom:1.5px solid rgba(255,255,255,0.2);
-                padding:6px 4px 6px 20px;
-                color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;
-                outline:none;transition:border-color .2s;caret-color:#a78bfa;
-              "
-              onfocus="this.style.borderBottomColor='rgba(167,139,250,0.9)'"
-              onblur="this.style.borderBottomColor='rgba(255,255,255,0.2)'"
-              onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+              <input id="loginUser" class="login-input" autocomplete="username"
+                onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
             </div>
           </div>
 
           <!-- Contraseña -->
-          <div style="margin-bottom:24px">
+          <div style="margin-bottom:26px">
             <div style="font-size:10px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:8px">Contraseña</div>
             <div style="position:relative;display:flex;align-items:center">
               <i class="fas fa-lock" style="position:absolute;left:0;color:rgba(255,255,255,0.3);font-size:12px;pointer-events:none"></i>
-              <input id="loginPass" type="password" autocomplete="current-password" style="
-                width:100%;background:transparent;border:none;
-                border-bottom:1.5px solid rgba(255,255,255,0.2);
-                padding:6px 24px 6px 20px;
-                color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;
-                outline:none;transition:border-color .2s;caret-color:#a78bfa;
-              "
-              onfocus="this.style.borderBottomColor='rgba(167,139,250,0.9)'"
-              onblur="this.style.borderBottomColor='rgba(255,255,255,0.2)'"
-              onkeydown="if(event.key==='Enter')doLogin()">
-              <button onclick="toggleLoginPass()" style="position:absolute;right:0;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.3);font-size:12px;padding:4px">
+              <input id="loginPass" type="password" class="login-input" autocomplete="current-password"
+                style="padding-right:28px"
+                onkeydown="if(event.key==='Enter')doLogin()">
+              <button onclick="toggleLoginPass()" style="position:absolute;right:0;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.3);font-size:13px;padding:4px;line-height:1">
                 <i class="fas fa-eye" id="togglePassIcon"></i>
               </button>
             </div>
           </div>
 
           <!-- Error -->
-          <div id="loginError" style="display:none;background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;padding:8px 12px;border-radius:9px;font-size:11px;margin-bottom:12px"></div>
+          <div id="loginError" style="display:none;background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;padding:8px 12px;border-radius:9px;font-size:12px;margin-bottom:14px"></div>
 
           <!-- Botón -->
-          <button onclick="doLogin()" id="loginBtn" style="
-            width:100%;
-            background:linear-gradient(135deg,#1d4ed8,#3b82f6);
-            border:none;border-radius:50px;
-            color:#fff;font-family:'Space Grotesk',sans-serif;
-            font-size:13px;font-weight:700;
-            padding:12px;cursor:pointer;
-            display:flex;align-items:center;justify-content:center;
-            transition:all .2s;
-            box-shadow:0 6px 20px rgba(37,99,235,0.4);
-            letter-spacing:0.3px;
-          "
-          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,0.55)'"
-          onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(37,99,235,0.4)'">
-            Iniciar Sesión
+          <button onclick="doLogin()" id="loginBtn" class="login-btn">
+            Iniciar Sesi\u00f3n
           </button>
         </div>
       </div>
@@ -2472,6 +2501,7 @@ function _showLogin(){
   }).catch(function(){});
   setTimeout(function(){ var u=document.getElementById('loginUser'); if(u) u.focus(); },100);
 }
+
 function toggleLoginPass(){
   var inp  = document.getElementById('loginPass');
   var icon = document.getElementById('togglePassIcon');
@@ -2500,7 +2530,7 @@ function doLogin(){
       btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Iniciar Sesión';
       return;
     }
-    try { sessionStorage.setItem('tejilook_user', JSON.stringify(r)); } catch(e){}
+    try { localStorage.setItem('tejilook_user', JSON.stringify(r)); } catch(e){}
     _initApp(r);
   }).catch(function(e){
     errEl.textContent='Error: '+e.message;
@@ -2511,7 +2541,7 @@ function doLogin(){
 }
 
 function doLogout(){
-  try { sessionStorage.removeItem('tejilook_user'); } catch(e){}
+  try { localStorage.removeItem('tejilook_user'); } catch(e){}
   currentUser = null;
   _showLogin();
 }
