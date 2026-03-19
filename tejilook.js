@@ -107,17 +107,17 @@ function dashRender(d){
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
-        +'<div id="chartMaquilas"></div>'
+        +'<div id="chartMaquilas" style="overflow-y:auto;overflow-x:hidden;max-height:260px;min-height:60px"></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
-        +'<div style="overflow-x:auto"><table class="table" style="font-size:12px">'
-          +'<thead><tr><th>Trabajador</th>'
+        +'<div style="overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:8px;max-height:320px"><table class="table" style="font-size:12px;min-width:360px">'
+          +'<thead style="position:sticky;top:0;z-index:3"><tr><th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
           +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
           +'<th style="text-align:right">Total</th></tr></thead><tbody>'
           +p.map(function(t){
-            return '<tr><td><strong>'+t.nombre+'</strong></td>'
+            return '<tr><td style="position:sticky;left:0;background:var(--surface);z-index:1"><strong>'+t.nombre+'</strong></td>'
               +procKeys.map(function(proc){
                 var v = t.porProceso[proc] || 0;
                 return '<td style="text-align:center">'+(v ? '<span class="badge badge-info">'+v+'</span>' : '<span style="color:var(--text-light)">\u2014</span>')+'</td>';
@@ -147,21 +147,18 @@ function dashRender(d){
       +'</div></div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  // Barras maquilas
+  //   // Maquilas — estilo compacto
   var maxM = pm.length ? pm[0].sueteres : 1;
   document.getElementById('chartMaquilas').innerHTML = pm.slice(0,8).map(function(m,i){
     var pct = maxM ? Math.round(m.sueteres/maxM*100) : 0;
     var col = colors[i % colors.length];
-    return '<div style="margin-bottom:10px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-        +'<span style="font-size:13px;font-weight:500">'+m.nombre+'</span>'
-        +'<div style="display:flex;gap:8px;align-items:center">'
-          +'<span style="font-size:11px;color:var(--text-muted)">'+m.salidas+' salidas</span>'
-          +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' su</span>'
-        +'</div>'
+    return '<div style="margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+        +'<span style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+m.nombre+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:'+col+';flex-shrink:0">'+m.sueteres+' su <span style="font-size:10px;color:var(--text-muted);font-weight:400">('+m.salidas+' sal.)</span></span>'
       +'</div>'
-      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
+      +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:3px;transition:width .5s"></div>'
       +'</div></div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
@@ -495,9 +492,15 @@ renderEntradaTallasBody();
 }).catch(()=>info.innerHTML='<span style="color:var(--danger)">Error al buscar</span>');
 }
 
-function editarClienteForm(c){ document.getElementById('clienteId').value=c.id; document.getElementById('clienteNombre').value=c.cliente; document.getElementById('clienteLogoUrl').value=c.logo||''; document.getElementById('clienteActivo').value=c.activo; if(c.logo){const img=document.getElementById('logoPreview');img.src=c.logo;img.style.display='block';} document.getElementById('formClienteTitle').textContent='Editar Cliente'; window.scrollTo(0,0); }
+function editarClienteForm(c){ document.getElementById('clienteId').value=c.id; document.getElementById('clienteNombre').value=c.cliente; document.getElementById('clienteLogoUrl').value=c.logo||''; document.getElementById('clienteActivo').value=c.activo; if(c.logo){const img=document.getElementById('logoPreview');img.src=c.logo;img.style.display='block';} document.getElementById('formClienteTitle').textContent='Editar Cliente'; window.scrollTo(0,0); 
+  var t=document.getElementById('modalClienteTitle');if(t)t.textContent='Editar Cliente';
+  openModal('modalCliente');
+}
 
-function editarMaquilaForm(m){ document.getElementById('maqId').value=m.id; document.getElementById('maqNombre').value=m.maquila; document.getElementById('maqDestino').value=m.destino||''; document.getElementById('maqActivo').value=m.activo; document.getElementById('formMaqTitle').textContent='Editar Maquila'; window.scrollTo(0,0); }
+function editarMaquilaForm(m){ document.getElementById('maqId').value=m.id; document.getElementById('maqNombre').value=m.maquila; document.getElementById('maqDestino').value=m.destino||''; document.getElementById('maqActivo').value=m.activo; document.getElementById('formMaqTitle').textContent='Editar Maquila'; window.scrollTo(0,0); 
+  var t=document.getElementById('modalMaquilaTitle');if(t)t.textContent='Editar Maquila';
+  openModal('modalMaquila');
+}
 
 function editarModeloForm(idx){
 const m=_modelos[idx];
@@ -516,6 +519,8 @@ renderModeloTallasBody();
 });
 document.getElementById('formModTitle').textContent='Editar Modelo';
 window.scrollTo(0,0);
+
+  openModal('modalModelo');
 }
 
 function editarTrabForm(t){ document.getElementById('trabId').value=t.id; document.getElementById('trabNombre').value=t.nombre; document.getElementById('trabPuesto').value=t.puesto||'Revisión'; document.getElementById('trabFotoUrl').value=t.foto||''; document.getElementById('trabActivo').value=t.activo; if(t.foto){const img=document.getElementById('trabFotoPreview');img.src=t.foto;img.style.display='block';} document.getElementById('formTrabTitle').textContent='Editar Trabajador'; window.scrollTo(0,0); }
@@ -537,10 +542,13 @@ const btn=document.querySelector('[onclick="guardarCliente()"]');
 btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Guardando...';
 btn.disabled=true;
 call(fn,data).then(()=>{
-toast(id?'Cliente actualizado':'Cliente creado ✓');
+closeModal('modalCliente');toast(id?'Cliente actualizado':'Cliente creado ✓');
 limpiarFormCliente(); cargarTablaClientes();
 }).catch(e=>toast('Error: '+e.message,'danger'))
 .finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
+
+  var t=document.getElementById('modalTrabTitle');if(t)t.textContent='Editar Trabajador';
+  openModal('modalTrabajador');
 }
 
 function guardarEntrada(){
@@ -576,7 +584,7 @@ const modFotoFile=document.getElementById('modFotoFile');
 let modFotoBase64='';
 if(modFotoFile.files[0]) modFotoBase64=await fileToBase64(modFotoFile.files[0]);
 const data={id,noOrden,modelo:nombre,fechaEntrega:document.getElementById('modFecha').value,idCliente:selCli.value,nombreCliente:selCli.options[selCli.selectedIndex].dataset.nombre,idMaquila:selMaq.value,nombreMaquila:selMaq.value?selMaq.options[selMaq.selectedIndex].dataset.nombre:'',activo:'SI',tallas,fotoBase64:modFotoBase64,fotoUrl:document.getElementById('modFotoUrl').value};
-call(id?'editarModelo':'crearModelo',data).then(()=>{toast('Modelo guardado ✓');limpiarModelo();cargarTablaModelos();}).catch(e=>toast(e.message,'danger'));
+call(id?'editarModelo':'crearModelo',data).then(()=>{closeModal('modalModelo');toast('Modelo guardado ✓');limpiarModelo();cargarTablaModelos();}).catch(e=>toast(e.message,'danger'));
 }
 
 function guardarProduccion(){
@@ -644,7 +652,7 @@ const btn=document.querySelector('[onclick="guardarCliente()"]');
 btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Guardando...';
 btn.disabled=true;
 call(fn,data).then(()=>{
-toast(id?'Cliente actualizado':'Cliente creado ✓');
+closeModal('modalCliente');toast(id?'Cliente actualizado':'Cliente creado ✓');
 limpiarFormCliente(); cargarTablaClientes();
 }).catch(e=>toast('Error: '+e.message,'danger'))
 .finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
