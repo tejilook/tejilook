@@ -107,7 +107,7 @@ function dashRender(d){
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
-        +'<div style="overflow-x:scroll;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:8px"><table class="table" style="font-size:12px;min-width:500px">'
+        +'<div class="dash-comparativa" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:6px"><table class="table" style="font-size:12px;min-width:500px">'
           +'<thead style="position:sticky;top:0;z-index:3"><tr><th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
           +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
           +'<th style="text-align:right">Total</th></tr></thead><tbody>'
@@ -1632,7 +1632,7 @@ function dashCargarMaquilas(pm){
           +'<span style="font-size:13px;font-weight:600">'+m.nombre+'</span>'
           +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' su ('+m.salidas+' sal.)</span>'
         +'</div>'
-        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;max-width:320px">'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
           +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:6px;transition:width .5s"></div>'
         +'</div>'
       +'</div>';
