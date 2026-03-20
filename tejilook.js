@@ -92,7 +92,7 @@ function dashRender(d){
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M por persona</div>'
-        +'<div id="chartTrabajadores"></div>'
+        +'<div id="chartTrabajadores" style="max-width:480px"></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Reposiciones</div>'
@@ -142,7 +142,7 @@ function dashRender(d){
         +'<span style="font-size:13px;font-weight:500">'+t.nombre+'</span>'
         +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+t.piezas+' pz</span>'
       +'</div>'
-      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
+      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;max-width:400px">'
         +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
       +'</div></div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
@@ -1632,7 +1632,7 @@ function dashCargarMaquilas(pm){
           +'<span style="font-size:13px;font-weight:600">'+m.nombre+'</span>'
           +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' su ('+m.salidas+' sal.)</span>'
         +'</div>'
-        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;max-width:320px">'
           +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:6px;transition:width .5s"></div>'
         +'</div>'
       +'</div>';
