@@ -103,12 +103,7 @@ function dashRender(d){
 
   // ── Fila 2: maquilas + tabla comparativa ────────────────────────────────
   var fila2 =
-    '<div class="dash-fila2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
-      +'<div class="card" style="padding:20px">'
-        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
-        +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
-      +'</div>'
+    '<div class="dash-fila2" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
@@ -125,6 +120,11 @@ function dashRender(d){
               +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td></tr>';
           }).join('')
           +'</tbody></table></div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
+        +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
     +'</div>';
 
