@@ -10,32 +10,60 @@ const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', 
   var ov = document.getElementById('sidebarOverlay');
   if(ov) ov.classList.toggle('open');
 } function toggleMenu(el){ el.classList.toggle('open'); const sub=el.nextElementSibling; if(sub&&sub.classList.contains('nav-submenu')) sub.classList.toggle('open'); } function toggleDark(){ isDark=!isDark; localStorage.setItem('dark',isDark?'1':'0'); document.documentElement.setAttribute('data-theme',isDark?'dark':''); document.getElementById('darkIcon').className=isDark?'fas fa-sun':'fas fa-moon'; } function openModal(id){ document.getElementById(id).classList.add('open'); } function closeModal(id){ document.getElementById(id).classList.remove('open'); } document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); })); function toast(msg,type='success'){ const icons={success:'fas fa-check-circle',danger:'fas fa-exclamation-circle',warning:'fas fa-triangle-exclamation'}; const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="${icons[type]||icons.success}"></i> ${msg}`; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.remove(),3800); } function fmt(date){ if(!date) return '—'; const d=new Date(date); if(isNaN(d)) return date; return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); } function badge(text){ const map={ 'SI':'<span class="badge badge-success">Activo</span>', 'NO':'<span class="badge badge-danger">Inactivo</span>', 'Superusuario':'<span class="badge badge-danger">Superusuario</span>', 'Administrador':'<span class="badge badge-info">Admin</span>', 'Supervisor':'<span class="badge badge-warning">Supervisor</span>', }; return map[text]||`<span class="badge badge-gray">${text||'—'}</span>`; } function call(fn,...args){ return new Promise((res,rej)=>{ let r=google.script.run.withSuccessHandler(res).withFailureHandler(rej); r[fn](...args); }); } function fileToBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result);  r.onerror=rej; r.readAsDataURL(file); }); } function renderDashboard(){
-  var main = document.getElementById('main');
-  main.innerHTML =
-    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'
-      +'<h1 class="page-title">Dashboard</h1>'
-      +'<div style="display:flex;gap:8px">'
-        +'<button class="btn btn-sm '+(window._dashPeriodo==='semana'?'btn-primary':'btn-ghost')+'" onclick="dashSetPeriodo(\'semana\')">Esta semana</button>'
-        +'<button class="btn btn-sm '+((!window._dashPeriodo||window._dashPeriodo==='mes')?'btn-primary':'btn-ghost')+'" onclick="dashSetPeriodo(\'mes\')">Este mes</button>'
-        +'<button class="btn btn-sm '+(window._dashPeriodo==='anio'?'btn-primary':'btn-ghost')+'" onclick="dashSetPeriodo(\'anio\')">Este año</button>'
-      +'</div>'
-    +'</div>'
-    +'<div id="dashContent" style="padding:0 24px 32px">'
-      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'
-    +'</div>';
+  var ahora = new Date();
+  var anioActual = ahora.getFullYear();
 
-  if(!window._dashPeriodo) window._dashPeriodo = 'mes';
+  // Inicializar filtros
+  if(!window._dashAnio) window._dashAnio = anioActual;
+  if(window._dashMes === undefined) window._dashMes = ahora.getMonth(); // mes actual por defecto
+
+  // Generar años desde 2024 hasta año actual + 1
+  var anioOpts = '';
+  for(var y = 2024; y <= anioActual + 1; y++){
+    anioOpts += '<option value="'+y+'"'+(y===window._dashAnio?' selected':'')+'>'+y+'</option>';
+  }
+
+  // Meses
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mesOpts = '<option value=""'+(window._dashMes===''?' selected':'')+'>Todo el año</option>';
+  meses.forEach(function(m,i){
+    mesOpts += '<option value="'+i+'"'+(window._dashMes===i?' selected':'')+'>'+m+'</option>';
+  });
+
+  document.getElementById('main').innerHTML =
+    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'      +'<h1 class="page-title">Dashboard</h1>'      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'        +'<select class="form-control form-select" id="dashAnioSel" style="width:90px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +anioOpts        +'</select>'        +'<select class="form-control form-select" id="dashMesSel" style="width:140px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +mesOpts        +'</select>'      +'</div>'    +'</div>'    +'<div id="dashContent" style="padding:0 24px 32px">'      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'    +'</div>';
+
+  dashCargar();
+}
+
+function dashFiltroChange(){
+  var sel = document.getElementById('dashAnioSel');
+  var mes = document.getElementById('dashMesSel');
+  if(sel) window._dashAnio = parseInt(sel.value);
+  if(mes) window._dashMes = mes.value === '' ? '' : parseInt(mes.value);
   dashCargar();
 }
 
 function dashSetPeriodo(p){
+  // kept for compatibility
   window._dashPeriodo = p;
   renderDashboard();
 }
 
 function dashCargar(){
-  call('getDashboardStats', window._dashPeriodo).then(function(d){
-    if(!d){ document.getElementById('dashContent').innerHTML='<div class="empty-state"><i class="fas fa-chart-pie"></i><p>Sin datos</p></div>'; return; }
+  var anio = window._dashAnio || new Date().getFullYear();
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  // Label para mostrar en gráficas
+  window._dashPeriodoLabel = mes !== '' ? meses[mes]+' '+anio : 'Año '+anio;
+
+  call('getDashboardStats', null, anio, mes).then(function(d){
+    if(!d){
+      document.getElementById('dashContent').innerHTML='<div class="empty-state"><i class="fas fa-chart-pie"></i><p>Sin datos</p></div>';
+      return;
+    }
     dashRender(d);
   }).catch(function(e){
     document.getElementById('dashContent').innerHTML='<div style="color:var(--danger);padding:20px">Error: '+e.message+'</div>';
@@ -46,8 +74,7 @@ function dashRender(d){
   var p   = d.porTrabajador || [];
   var pm  = d.porMaquila    || [];
   var pa  = d.porProceso    || {};
-  var labels = {semana:'Esta semana', mes:'Este mes', anio:'Este a\u00f1o'};
-  var periodoLabel = labels[window._dashPeriodo] || '';
+  var periodoLabel = window._dashPeriodoLabel || '';
   var procKeys = Object.keys(pa);
 
   // Suéteres enviados a maquila (de SALIDAS — dato correcto y único)
@@ -151,7 +178,7 @@ function dashRender(d){
   // Maquilas panel
   dashCargarMaquilas(pm);
   // Reposiciones panel
-  dashCargarReposiciones(window._dashPeriodo||'mes');
+  dashCargarReposiciones(null);
 }
 function dashKpi(icon, label, value, color, sub){
   var valStr = String(value);
@@ -1647,7 +1674,9 @@ function dashCargarMaquilas(pm){
 
 
 function dashCargarReposiciones(periodo){
-  call('getReposicionesStats', periodo).then(function(stats){
+  var anio = window._dashAnio || new Date().getFullYear();
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  call('getReposicionesStats', null, anio, mes).then(function(stats){
     var el = document.getElementById('dashReposChart');
     if(!el) return;
     var tf = stats.totalFaltantes || 0;
@@ -2707,3 +2736,5 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
+
+
