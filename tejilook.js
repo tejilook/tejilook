@@ -107,7 +107,7 @@ function dashRender(d){
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
-        +'<div id="chartMaquilas" style="overflow:hidden"><div class="loading"><div class="spinner"></div></div></div>'
+        +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
@@ -1622,20 +1622,29 @@ function dashCargarMaquilas(pm){
   }
   var colors = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
   var maxV = pm[0].sueteres || 1;
-  el.innerHTML = pm.slice(0,6).map(function(m,i){
-    var pct = Math.round(m.sueteres/maxV*100);
-    var col = colors[i % colors.length];
-    return '<div style="margin-bottom:14px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-        +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+m.nombre+'</span>'
-        +'<span style="font-size:13px;font-weight:700;color:'+col+';flex-shrink:0">'+m.sueteres+' su <span style="font-size:11px;color:var(--text-muted);font-weight:400">('+m.salidas+' sal.)</span></span>'
-      +'</div>'
-      +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:6px;transition:width .5s"></div>'
+  var totalSu = pm.reduce(function(s,m){ return s+m.sueteres; },0);
+  el.innerHTML =
+    pm.slice(0,6).map(function(m,i){
+      var pct = Math.round(m.sueteres/maxV*100);
+      var col = colors[i % colors.length];
+      return '<div style="margin-bottom:16px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:13px;font-weight:600">'+m.nombre+'</span>'
+          +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+m.sueteres+' su ('+m.salidas+' sal.)</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:6px;transition:width .5s"></div>'
+        +'</div>'
+      +'</div>';
+    }).join('')
+    +'<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">'
+      +'<div style="display:flex;justify-content:space-between">'
+        +'<span style="font-size:12px;font-weight:600;color:var(--text-muted)">TOTAL</span>'
+        +'<span style="font-size:13px;font-weight:700;color:var(--primary)">'+totalSu+' suéteres</span>'
       +'</div>'
     +'</div>';
-  }).join('');
 }
+
 
 function dashCargarReposiciones(periodo){
   call('getReposicionesStats', periodo).then(function(stats){
