@@ -2860,3 +2860,5 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
+
+
