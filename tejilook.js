@@ -80,7 +80,6 @@ function dashRender(d){
   var totalSueteresSalidas = pm.reduce(function(s,m){ return s+(m.sueteres||0); },0);
   var topGeneral = p.length ? p[0] : null;
 
-  // Top por área
   var topPorArea = {};
   p.forEach(function(t){
     Object.keys(t.porProceso).forEach(function(proc){
@@ -103,13 +102,18 @@ function dashRender(d){
     +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '—', 'var(--info)', topMaq ? topMaq.sueteres+' suéteres' : '')
     +'</div>';
 
-  // ── Fila 1: Piezas trabajadores (grande) + Reposiciones (320px) ───
+  // ── Fila 1: Piezas trabajadores + Salidas maquila + Reposiciones ──
   var fila1 =
-    '<div class="dash-fila1" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px">'
+    '<div class="dash-fila1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' — F+E+M por persona</div>'
-        +'<div id="chartTrabajadores" style="max-width:480px"></div>'
+        +'<div id="chartTrabajadores"></div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suéteres enviados '+periodoLabel+'</div>'
+        +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Reposiciones</div>'
@@ -118,44 +122,50 @@ function dashRender(d){
       +'</div>'
     +'</div>';
 
-  // ── Fila 2: Salidas maquila (320px) + Tejedor errores (1fr) + Maq defectos (320px) ─
+  // ── Fila 2: Maquina defectos + Tejedor faltantes + Tejedor defectos ──
   var fila2 =
-    '<div class="dash-fila2" style="display:grid;grid-template-columns:320px 1fr 320px;gap:16px;margin-bottom:16px">'
-      +'<div class="card" style="padding:20px">'
-        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suéteres enviados '+periodoLabel+'</div>'
-        +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
-      +'</div>'
-      +'<div class="card" style="padding:20px">'
-        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Tejedor con más errores</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Faltantes + Defectos por tejedor '+periodoLabel+'</div>'
-        +'<div id="dashTejErrChart"><div class="loading"><div class="spinner"></div></div></div>'
-      +'</div>'
+    '<div class="dash-fila2" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Máquina con más defectos</div>'
         +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Solo defectos '+periodoLabel+'</div>'
         +'<div id="dashMaqDefChart"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Tejedor con más faltantes</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Solo faltantes '+periodoLabel+'</div>'
+        +'<div id="dashTejFaltChart"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Tejedor con más defectos</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Solo defectos '+periodoLabel+'</div>'
+        +'<div id="dashTejDefChart"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>'
     +'</div>';
 
-  // ── Fila 3: Comparativa por proceso — full width ───────────────────
+  // ── Fila 3: Comparativa full width ────────────────────────────────
   var fila3 =
     '<div class="card" style="padding:20px;margin-bottom:16px">'
       +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
       +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador — '+periodoLabel+'</div>'
-      +'<div class="dash-comparativa" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:6px"><table class="table" style="font-size:12px;min-width:500px">'
-        +'<thead style="position:sticky;top:0;z-index:3"><tr><th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
-        +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
-        +'<th style="text-align:right;white-space:nowrap">Total</th></tr></thead><tbody>'
-        +p.map(function(t){
-          return '<tr><td style="position:sticky;left:0;background:var(--surface);z-index:1"><strong>'+t.nombre+'</strong></td>'
-            +procKeys.map(function(proc){
-              var v = t.porProceso[proc] || 0;
-              return '<td style="text-align:center">'+(v?'<span class="badge badge-info">'+v+'</span>':'<span style="color:var(--text-light)">—</span>')+'</td>';
-            }).join('')
-            +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td></tr>';
-        }).join('')
-        +'</tbody></table></div>'
+      +'<div class="dash-comparativa" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:6px">'
+        +'<table class="table" style="font-size:12px;min-width:500px">'
+          +'<thead style="position:sticky;top:0;z-index:3"><tr>'
+            +'<th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
+            +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
+            +'<th style="text-align:right;white-space:nowrap">Total</th>'
+          +'</tr></thead><tbody>'
+          +p.map(function(t){
+            return '<tr>'
+              +'<td style="position:sticky;left:0;background:var(--surface);z-index:1"><strong>'+t.nombre+'</strong></td>'
+              +procKeys.map(function(proc){
+                var v = t.porProceso[proc]||0;
+                return '<td style="text-align:center">'+(v?'<span class="badge badge-info">'+v+'</span>':'<span style="color:var(--text-light)">—</span>')+'</td>';
+              }).join('')
+              +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td>'
+            +'</tr>';
+          }).join('')
+          +'</tbody></table>'
+      +'</div>'
     +'</div>';
 
   document.getElementById('dashContent').innerHTML = kpiHtml + fila1 + fila2 + fila3;
@@ -164,24 +174,25 @@ function dashRender(d){
 
   // Barras trabajadores
   var maxT = p.length ? p[0].piezas : 1;
-  document.getElementById('chartTrabajadores').innerHTML = p.slice(0,10).map(function(t,i){
+  document.getElementById('chartTrabajadores').innerHTML = p.slice(0,8).map(function(t,i){
     var pct = maxT ? Math.round(t.piezas/maxT*100) : 0;
-    var col = colors[i % colors.length];
+    var col = colors[i%colors.length];
     return '<div style="margin-bottom:10px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:8px">'
-        +'<span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+t.nombre+'</span>'
-        +'<span style="font-size:13px;font-weight:700;color:'+col+';flex-shrink:0">'+t.piezas+' pz</span>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:8px">'
+        +'<span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+t.nombre+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:'+col+';flex-shrink:0">'+t.piezas+' pz</span>'
       +'</div>'
-      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;max-width:400px">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
-      +'</div></div>';
+      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px;transition:width .5s"></div>'
+      +'</div>'
+    +'</div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  // Maquilas y reposiciones se cargan async
   dashCargarMaquilas(pm);
   dashCargarReposiciones(null);
-  dashCargarTejErrores();
   dashCargarMaqDefectos();
+  dashCargarTejFaltantes();
+  dashCargarTejDefectos();
 }
 
 function dashKpi(icon, label, value, color, sub){
@@ -1678,55 +1689,70 @@ function dashCargarMaquilas(pm){
 
 
 
-function dashCargarTejErrores(){
-  var el = document.getElementById('dashTejErrChart');
+function dashCargarTejFaltantes(){
+  var el = document.getElementById('dashTejFaltChart');
   if(!el) return;
   var anio = window._dashAnio || new Date().getFullYear();
   var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
   call('getReposiciones').then(function(data){
-    // Filtrar por periodo
     data = (data||[]).filter(function(r){
-      var f = new Date(r.fecha);
-      if(isNaN(f)) return false;
-      if(mes !== '') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
+      if(r.tipo !== 'Faltante') return false;
+      var f = new Date(r.fecha); if(isNaN(f)) return false;
+      if(mes!=='') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
       return f.getFullYear()===anio;
     });
-    // Agrupar por tejedor (faltantes + defectos)
     var por = {};
     data.forEach(function(r){
-      var t = r.tejedor || 'Sin nombre';
-      if(!por[t]) por[t] = {faltantes:0, defectos:0};
-      if(r.tipo==='Faltante') por[t].faltantes += r.cantidad||0;
-      else por[t].defectos += r.cantidad||0;
+      var t = r.tejedor||'Sin nombre';
+      por[t] = (por[t]||0)+(r.cantidad||0);
     });
-    var lista = Object.keys(por).map(function(k){
-      return {nombre:k, total:por[k].faltantes+por[k].defectos, faltantes:por[k].faltantes, defectos:por[k].defectos};
-    }).sort(function(a,b){ return b.total-a.total; }).slice(0,6);
-
-    if(!lista.length){
-      el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
-      return;
-    }
-    var maxV = lista[0].total || 1;
-    el.innerHTML = lista.map(function(t,i){
-      var pct = Math.round(t.total/maxV*100);
-      return '<div style="margin-bottom:14px">'
-        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-          +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+t.nombre+'</span>'
-          +'<span style="font-size:12px;flex-shrink:0">'
-            +'<span style="color:var(--warning)">F:'+t.faltantes+'</span>'
-            +' <span style="color:var(--danger)">D:'+t.defectos+'</span>'
-          +'</span>'
-        +'</div>'
-        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
-          +'<div style="height:100%;width:'+pct+'%;background:var(--danger);border-radius:6px;transition:width .5s"></div>'
-        +'</div>'
-      +'</div>';
-    }).join('');
-  }).catch(function(){
-    el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
-  });
+    _dashBarras('dashTejFaltChart', por, 'var(--warning)', 'falt.');
+  }).catch(function(){ var el=document.getElementById('dashTejFaltChart'); if(el) el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>'; });
 }
+
+function dashCargarTejDefectos(){
+  var el = document.getElementById('dashTejDefChart');
+  if(!el) return;
+  var anio = window._dashAnio || new Date().getFullYear();
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  call('getReposiciones').then(function(data){
+    data = (data||[]).filter(function(r){
+      if(r.tipo !== 'Defecto') return false;
+      var f = new Date(r.fecha); if(isNaN(f)) return false;
+      if(mes!=='') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
+      return f.getFullYear()===anio;
+    });
+    var por = {};
+    data.forEach(function(r){
+      var t = r.tejedor||'Sin nombre';
+      por[t] = (por[t]||0)+(r.cantidad||0);
+    });
+    _dashBarras('dashTejDefChart', por, 'var(--danger)', 'def.');
+  }).catch(function(){ var el=document.getElementById('dashTejDefChart'); if(el) el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>'; });
+}
+
+// Helper: renderiza barras en un elemento dado un objeto {nombre: cantidad}
+function _dashBarras(elId, por, color, sufijo){
+  var el = document.getElementById(elId);
+  if(!el) return;
+  var lista = Object.keys(por).map(function(k){ return {nombre:k,total:por[k]}; })
+    .sort(function(a,b){ return b.total-a.total; }).slice(0,6);
+  if(!lista.length){ el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>'; return; }
+  var maxV = lista[0].total||1;
+  el.innerHTML = lista.map(function(item){
+    var pct = Math.round(item.total/maxV*100);
+    return '<div style="margin-bottom:14px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+        +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+item.nombre+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:'+color+';flex-shrink:0">'+item.total+' '+sufijo+'</span>'
+      +'</div>'
+      +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:6px;transition:width .5s"></div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
 
 function dashCargarMaqDefectos(){
   var el = document.getElementById('dashMaqDefChart');
@@ -1734,44 +1760,19 @@ function dashCargarMaqDefectos(){
   var anio = window._dashAnio || new Date().getFullYear();
   var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
   call('getReposiciones').then(function(data){
-    // Solo defectos, filtrados por periodo
     data = (data||[]).filter(function(r){
       if(r.tipo !== 'Defecto') return false;
-      var f = new Date(r.fecha);
-      if(isNaN(f)) return false;
-      if(mes !== '') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
+      var f = new Date(r.fecha); if(isNaN(f)) return false;
+      if(mes!=='') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
       return f.getFullYear()===anio;
     });
-    // Agrupar por máquina
     var por = {};
     data.forEach(function(r){
-      var m = r.maquina || 'Sin máquina';
-      por[m] = (por[m]||0) + (r.cantidad||0);
+      var m = 'Máq.'+(r.maquina||'?');
+      por[m] = (por[m]||0)+(r.cantidad||0);
     });
-    var lista = Object.keys(por).map(function(k){
-      return {nombre:k, total:por[k]};
-    }).sort(function(a,b){ return b.total-a.total; }).slice(0,6);
-
-    if(!lista.length){
-      el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin defectos registrados</div>';
-      return;
-    }
-    var maxV = lista[0].total || 1;
-    el.innerHTML = lista.map(function(m){
-      var pct = Math.round(m.total/maxV*100);
-      return '<div style="margin-bottom:14px">'
-        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-          +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">Máq. '+m.nombre+'</span>'
-          +'<span style="font-size:13px;font-weight:700;color:var(--danger);flex-shrink:0">'+m.total+' def.</span>'
-        +'</div>'
-        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
-          +'<div style="height:100%;width:'+pct+'%;background:#ef4444;border-radius:6px;transition:width .5s"></div>'
-        +'</div>'
-      +'</div>';
-    }).join('');
-  }).catch(function(){
-    el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
-  });
+    _dashBarras('dashMaqDefChart', por, '#ef4444', 'def.');
+  }).catch(function(){ var el=document.getElementById('dashMaqDefChart'); if(el) el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>'; });
 }
 
 function dashCargarReposiciones(periodo){
