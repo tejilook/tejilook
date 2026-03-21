@@ -9,7 +9,38 @@ const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', 
   document.getElementById('sidebar').classList.toggle('open');
   var ov = document.getElementById('sidebarOverlay');
   if(ov) ov.classList.toggle('open');
-} function toggleMenu(el){ el.classList.toggle('open'); const sub=el.nextElementSibling; if(sub&&sub.classList.contains('nav-submenu')) sub.classList.toggle('open'); } function toggleDark(){ isDark=!isDark; localStorage.setItem('dark',isDark?'1':'0'); document.documentElement.setAttribute('data-theme',isDark?'dark':''); document.getElementById('darkIcon').className=isDark?'fas fa-sun':'fas fa-moon'; } function openModal(id){ document.getElementById(id).classList.add('open'); } function closeModal(id){ document.getElementById(id).classList.remove('open'); } document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); })); function toast(msg,type='success'){ const icons={success:'fas fa-check-circle',danger:'fas fa-exclamation-circle',warning:'fas fa-triangle-exclamation'}; const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="${icons[type]||icons.success}"></i> ${msg}`; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.remove(),3800); } function fmt(date){ if(!date) return '—'; const d=new Date(date); if(isNaN(d)) return date; return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); } function badge(text){ const map={ 'SI':'<span class="badge badge-success">Activo</span>', 'NO':'<span class="badge badge-danger">Inactivo</span>', 'Superusuario':'<span class="badge badge-danger">Superusuario</span>', 'Administrador':'<span class="badge badge-info">Admin</span>', 'Supervisor':'<span class="badge badge-warning">Supervisor</span>', }; return map[text]||`<span class="badge badge-gray">${text||'—'}</span>`; } function call(fn,...args){ return new Promise((res,rej)=>{ let r=google.script.run.withSuccessHandler(res).withFailureHandler(rej); r[fn](...args); }); } function fileToBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result);  r.onerror=rej; r.readAsDataURL(file); }); } function renderDashboard(){
+} function toggleMenu(el){ el.classList.toggle('open'); const sub=el.nextElementSibling; if(sub&&sub.classList.contains('nav-submenu')) sub.classList.toggle('open'); } function toggleDark(){ isDark=!isDark; localStorage.setItem('dark',isDark?'1':'0'); document.documentElement.setAttribute('data-theme',isDark?'dark':''); document.getElementById('darkIcon').className=isDark?'fas fa-sun':'fas fa-moon'; } function openModal(id){ document.getElementById(id).classList.add('open'); } function closeModal(id){ document.getElementById(id).classList.remove('open'); } document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); })); function toast(msg,type='success'){ const icons={success:'fas fa-check-circle',danger:'fas fa-exclamation-circle',warning:'fas fa-triangle-exclamation'}; const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="${icons[type]||icons.success}"></i> ${msg}`; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.remove(),3800); } function fmt(date){ if(!date) return '—'; const d=new Date(date); if(isNaN(d)) return date; return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); } function badge(text){ const map={ 'SI':'<span class="badge badge-success">Activo</span>', 'NO':'<span class="badge badge-danger">Inactivo</span>', 'Superusuario':'<span class="badge badge-danger">Superusuario</span>', 'Administrador':'<span class="badge badge-info">Admin</span>', 'Supervisor':'<span class="badge badge-warning">Supervisor</span>', }; return map[text]||`<span class="badge badge-gray">${text||'—'}</span>`; } function call(fn,...args){ return new Promise((res,rej)=>{ let r=google.script.run.withSuccessHandler(res).withFailureHandler(rej); r[fn](...args); }); } function fileToBase64(file){
+  return new Promise(function(res, rej){
+    var MAX_W = 800;
+    var QUALITY = 0.70;
+    var reader = new FileReader();
+    reader.onerror = rej;
+    reader.onload = function(e){
+      var img = new Image();
+      img.onerror = rej;
+      img.onload = function(){
+        // Si ya es pequeña no reescalar
+        var w = img.width, h = img.height;
+        if(w > MAX_W){
+          h = Math.round(h * MAX_W / w);
+          w = MAX_W;
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        var compressed = canvas.toDataURL('image/jpeg', QUALITY);
+        var originalKB  = Math.round(file.size/1024);
+        var compressedKB = Math.round(compressed.length * 0.75 / 1024);
+        console.log('Imagen: '+originalKB+'KB → '+compressedKB+'KB ('+w+'x'+h+'px)');
+        res(compressed);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+} function renderDashboard(){
   var ahora = new Date();
   var anioActual = ahora.getFullYear();
 
@@ -190,9 +221,26 @@ function dashRender(d){
 
   dashCargarMaquilas(pm);
   dashCargarReposiciones(null);
-  dashCargarMaqDefectos();
-  dashCargarTejFaltantes();
-  dashCargarTejDefectos();
+  // Cargar reposiciones una sola vez para los 3 cards siguientes
+  call('getReposiciones').then(function(repos){
+    window._dashReposCache = (repos||[]).map(function(r){
+      // Normalizar fecha — puede venir como timestamp, string, o Date serializado
+      var raw = r.fecha;
+      if(raw && typeof raw === 'number'){
+        // Timestamp de Sheets (milisegundos desde epoch)
+        var d = new Date(raw);
+        r.fecha = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      }
+      return r;
+    });
+    dashCargarMaqDefectos();
+    dashCargarTejFaltantes();
+    dashCargarTejDefectos();
+  }).catch(function(){
+    dashCargarMaqDefectos();
+    dashCargarTejFaltantes();
+    dashCargarTejDefectos();
+  });
 }
 
 function dashKpi(icon, label, value, color, sub){
@@ -1741,61 +1789,50 @@ function _repoFiltrarPeriodo(data){
 function dashCargarTejFaltantes(){
   var el = document.getElementById('dashTejFaltChart');
   if(!el) return;
-  call('getReposiciones').then(function(data){
-    var fil = _repoFiltrarPeriodo(data).filter(function(r){
-      return String(r.tipo||'').toLowerCase().indexOf('faltante') !== -1;
-    });
-    var por = {};
-    fil.forEach(function(r){
-      var t = (r.tejedor||'').trim() || 'Sin nombre';
-      por[t] = (por[t]||0) + (Number(r.cantidad)||1);
-    });
-    _dashBarras('dashTejFaltChart', por, '#f59e0b', 'falt.');
-  }).catch(function(){
-    var el=document.getElementById('dashTejFaltChart');
-    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:13px">Sin datos</div>';
+  var data = window._dashReposCache || [];
+  var fil = _repoFiltrarPeriodo(data).filter(function(r){
+    return String(r.tipo||'').toLowerCase().indexOf('faltante') !== -1;
   });
+  var por = {};
+  fil.forEach(function(r){
+    var t = (r.tejedor||'').trim() || 'Sin nombre';
+    por[t] = (por[t]||0) + (Number(r.cantidad)||1);
+  });
+  _dashBarras('dashTejFaltChart', por, '#f59e0b', 'falt.');
 }
+
 
 function dashCargarTejDefectos(){
   var el = document.getElementById('dashTejDefChart');
   if(!el) return;
-  call('getReposiciones').then(function(data){
-    var fil = _repoFiltrarPeriodo(data).filter(function(r){
-      return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
-    });
-    var por = {};
-    fil.forEach(function(r){
-      var t = (r.tejedor||'').trim() || 'Sin nombre';
-      por[t] = (por[t]||0) + (Number(r.cantidad)||1);
-    });
-    _dashBarras('dashTejDefChart', por, '#ef4444', 'def.');
-  }).catch(function(){
-    var el=document.getElementById('dashTejDefChart');
-    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:13px">Sin datos</div>';
+  var data = window._dashReposCache || [];
+  var fil = _repoFiltrarPeriodo(data).filter(function(r){
+    return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
   });
+  var por = {};
+  fil.forEach(function(r){
+    var t = (r.tejedor||'').trim() || 'Sin nombre';
+    por[t] = (por[t]||0) + (Number(r.cantidad)||1);
+  });
+  _dashBarras('dashTejDefChart', por, '#ef4444', 'def.');
 }
+
 
 function dashCargarMaqDefectos(){
   var el = document.getElementById('dashMaqDefChart');
   if(!el) return;
-  call('getReposiciones').then(function(data){
-    var fil = _repoFiltrarPeriodo(data).filter(function(r){
-      return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
-    });
-    var por = {};
-    fil.forEach(function(r){
-      var m = (r.maquina||'').trim();
-      var key = m ? 'Máq. '+m : 'Sin máquina';
-      por[key] = (por[key]||0) + (Number(r.cantidad)||1);
-    });
-    _dashBarras('dashMaqDefChart', por, '#ef4444', 'def.');
-  }).catch(function(){
-    var el=document.getElementById('dashMaqDefChart');
-    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:13px">Sin datos</div>';
+  var data = window._dashReposCache || [];
+  var fil = _repoFiltrarPeriodo(data).filter(function(r){
+    return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
   });
+  var por = {};
+  fil.forEach(function(r){
+    var m = (r.maquina||'').trim();
+    var key = m ? 'Máq. '+m : 'Sin máquina';
+    por[key] = (por[key]||0) + (Number(r.cantidad)||1);
+  });
+  _dashBarras('dashMaqDefChart', por, '#ef4444', 'def.');
 }
-
 
 function dashCargarReposiciones(periodo){
   var anio = window._dashAnio || new Date().getFullYear();
@@ -2860,5 +2897,3 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
-
-
