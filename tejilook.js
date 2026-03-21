@@ -32,7 +32,7 @@ const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', 
   });
 
   document.getElementById('main').innerHTML =
-    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'      +'<h1 class="page-title">Dashboard</h1>'      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'        +'<select class="form-control form-select" id="dashAnioSel" style="width:90px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +anioOpts        +'</select>'        +'<select class="form-control form-select" id="dashMesSel" style="width:140px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +mesOpts        +'</select>'      +'</div>'    +'</div>'    +'<div id="dashContent" style="padding:0 24px 32px">'      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'    +'</div>';
+    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'        +'<select class="form-control form-select" id="dashAnioSel" style="width:90px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +anioOpts        +'</select>'        +'<select class="form-control form-select" id="dashMesSel" style="width:140px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +mesOpts        +'</select>'      +'</div>'    +'</div>'    +'<div id="dashContent" style="padding:0 24px 32px">'      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'    +'</div>';
 
   dashCargar();
 }
@@ -77,48 +77,38 @@ function dashRender(d){
   var periodoLabel = window._dashPeriodoLabel || '';
   var procKeys = Object.keys(pa);
 
-  // Suéteres enviados a maquila (de SALIDAS — dato correcto y único)
-  var totalSueteresSalidas = pm.reduce(function(s,m){ return s + (m.sueteres||0); }, 0);
-
-  // Top trabajador general
+  var totalSueteresSalidas = pm.reduce(function(s,m){ return s+(m.sueteres||0); },0);
   var topGeneral = p.length ? p[0] : null;
 
-  // Top por área/proceso: de cada proceso, el trabajador con más piezas
+  // Top por área
   var topPorArea = {};
   p.forEach(function(t){
     Object.keys(t.porProceso).forEach(function(proc){
       var v = t.porProceso[proc];
-      if(!topPorArea[proc] || v > topPorArea[proc].piezas){
+      if(!topPorArea[proc] || v > topPorArea[proc].piezas)
         topPorArea[proc] = { nombre: t.nombre, piezas: v };
-      }
     });
   });
-
-  // Top maquila
   var topMaq = pm.length ? pm[0] : null;
 
-  // ── KPIs ────────────────────────────────────────────────────────────────
+  // ── KPIs ──────────────────────────────────────────────────────────
   var kpiHtml =
     '<div class="dash-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">'
-    // 1. Suéteres enviados a maquila
-    +dashKpi('fas fa-shirt','Su\u00e9teres procesados '+periodoLabel, totalSueteresSalidas, 'var(--primary)', 'Total enviados a maquila')
-    // 2. Top trabajador general
-    +dashKpi('fas fa-trophy','Top trabajador general', topGeneral ? topGeneral.nombre : '\u2014', 'var(--warning)', topGeneral ? topGeneral.piezas+' piezas' : '')
-    // 3. Top por área — uno por proceso
+    +dashKpi('fas fa-shirt','Suéteres procesados '+periodoLabel, totalSueteresSalidas, 'var(--primary)', 'Total enviados a maquila')
+    +dashKpi('fas fa-trophy','Top trabajador', topGeneral ? topGeneral.nombre : '—', 'var(--warning)', topGeneral ? topGeneral.piezas+' piezas' : '')
     +Object.keys(topPorArea).map(function(proc){
       var t = topPorArea[proc];
       return dashKpi('fas fa-star','Top '+proc, t.nombre, 'var(--success)', t.piezas+' piezas');
     }).join('')
-    // 4. Top maquila
-    +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '\u2014', 'var(--info)', topMaq ? topMaq.sueteres+' su\u00e9teres' : '')
+    +dashKpi('fas fa-truck-fast','Top maquila', topMaq ? topMaq.nombre : '—', 'var(--info)', topMaq ? topMaq.sueteres+' suéteres' : '')
     +'</div>';
 
-  // ── Fila 1: barras trabajadores + espacio reservado (reposiciones) ────────
+  // ── Fila 1: Piezas trabajadores (grande) + Reposiciones (320px) ───
   var fila1 =
-    '<div class="dash-fila1" style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px">'
+    '<div class="dash-fila1" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Piezas por Trabajador</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' \u2014 F+E+M por persona</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">'+periodoLabel+' — F+E+M por persona</div>'
         +'<div id="chartTrabajadores" style="max-width:480px"></div>'
       +'</div>'
       +'<div class="card" style="padding:20px">'
@@ -128,34 +118,47 @@ function dashRender(d){
       +'</div>'
     +'</div>';
 
-  // ── Fila 2: maquilas + tabla comparativa ────────────────────────────────
+  // ── Fila 2: Salidas maquila (320px) + Tejedor errores (1fr) + Maq defectos (320px) ─
   var fila2 =
-    '<div class="dash-fila2" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px">'
-      +'<div class="card" style="padding:20px">'
-        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador</div>'
-        +'<div class="dash-comparativa" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:6px"><table class="table" style="font-size:12px;min-width:500px">'
-          +'<thead style="position:sticky;top:0;z-index:3"><tr><th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
-          +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
-          +'<th style="text-align:right">Total</th></tr></thead><tbody>'
-          +p.map(function(t){
-            return '<tr><td style="position:sticky;left:0;background:var(--surface);z-index:1"><strong>'+t.nombre+'</strong></td>'
-              +procKeys.map(function(proc){
-                var v = t.porProceso[proc] || 0;
-                return '<td style="text-align:center">'+(v ? '<span class="badge badge-info">'+v+'</span>' : '<span style="color:var(--text-light)">\u2014</span>')+'</td>';
-              }).join('')
-              +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td></tr>';
-          }).join('')
-          +'</tbody></table></div>'
-      +'</div>'
+    '<div class="dash-fila2" style="display:grid;grid-template-columns:320px 1fr 320px;gap:16px;margin-bottom:16px">'
       +'<div class="card" style="padding:20px">'
         +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Salidas por Maquila</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Su\u00e9teres enviados '+periodoLabel+'</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suéteres enviados '+periodoLabel+'</div>'
         +'<div id="chartMaquilas"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Tejedor con más errores</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Faltantes + Defectos por tejedor '+periodoLabel+'</div>'
+        +'<div id="dashTejErrChart"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px">'
+        +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Máquina con más defectos</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Solo defectos '+periodoLabel+'</div>'
+        +'<div id="dashMaqDefChart"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>'
     +'</div>';
 
-  document.getElementById('dashContent').innerHTML = kpiHtml + fila1 + fila2;
+  // ── Fila 3: Comparativa por proceso — full width ───────────────────
+  var fila3 =
+    '<div class="card" style="padding:20px;margin-bottom:16px">'
+      +'<div style="font-weight:700;font-size:15px;margin-bottom:4px">Comparativa por Proceso</div>'
+      +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Piezas por trabajador — '+periodoLabel+'</div>'
+      +'<div class="dash-comparativa" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:6px"><table class="table" style="font-size:12px;min-width:500px">'
+        +'<thead style="position:sticky;top:0;z-index:3"><tr><th style="position:sticky;left:0;background:var(--surface2);z-index:4">Trabajador</th>'
+        +procKeys.map(function(pr){ return '<th style="text-align:center">'+pr+'</th>'; }).join('')
+        +'<th style="text-align:right;white-space:nowrap">Total</th></tr></thead><tbody>'
+        +p.map(function(t){
+          return '<tr><td style="position:sticky;left:0;background:var(--surface);z-index:1"><strong>'+t.nombre+'</strong></td>'
+            +procKeys.map(function(proc){
+              var v = t.porProceso[proc] || 0;
+              return '<td style="text-align:center">'+(v?'<span class="badge badge-info">'+v+'</span>':'<span style="color:var(--text-light)">—</span>')+'</td>';
+            }).join('')
+            +'<td style="text-align:right"><strong style="color:var(--primary)">'+t.piezas+'</strong></td></tr>';
+        }).join('')
+        +'</tbody></table></div>'
+    +'</div>';
+
+  document.getElementById('dashContent').innerHTML = kpiHtml + fila1 + fila2 + fila3;
 
   var colors = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
 
@@ -165,21 +168,22 @@ function dashRender(d){
     var pct = maxT ? Math.round(t.piezas/maxT*100) : 0;
     var col = colors[i % colors.length];
     return '<div style="margin-bottom:10px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-        +'<span style="font-size:13px;font-weight:500">'+t.nombre+'</span>'
-        +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+t.piezas+' pz</span>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:8px">'
+        +'<span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+t.nombre+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:'+col+';flex-shrink:0">'+t.piezas+' pz</span>'
       +'</div>'
       +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;max-width:400px">'
         +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div>'
       +'</div></div>';
   }).join('') || '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin datos</p></div>';
 
-  //   // Maquilas cargadas por dashCargarMaquilas()
-  // Maquilas panel
+  // Maquilas y reposiciones se cargan async
   dashCargarMaquilas(pm);
-  // Reposiciones panel
   dashCargarReposiciones(null);
+  dashCargarTejErrores();
+  dashCargarMaqDefectos();
 }
+
 function dashKpi(icon, label, value, color, sub){
   var valStr = String(value);
   // Shrink font for long values (names etc)
@@ -1126,7 +1130,7 @@ function renderSalidas(){
     var inp = 'style="background:var(--surface-2);color:var(--text-muted)"';
 
     document.getElementById('main').innerHTML =
-      '<div class="page-header"><div><h1>Salida a Maquila</h1></div></div>'
+      ''
      +'<div class="card">'
        +'<div class="card-header"><div class="card-title">Datos de la Salida</div></div>'
 
@@ -1672,6 +1676,103 @@ function dashCargarMaquilas(pm){
     +'</div>';
 }
 
+
+
+function dashCargarTejErrores(){
+  var el = document.getElementById('dashTejErrChart');
+  if(!el) return;
+  var anio = window._dashAnio || new Date().getFullYear();
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  call('getReposiciones').then(function(data){
+    // Filtrar por periodo
+    data = (data||[]).filter(function(r){
+      var f = new Date(r.fecha);
+      if(isNaN(f)) return false;
+      if(mes !== '') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
+      return f.getFullYear()===anio;
+    });
+    // Agrupar por tejedor (faltantes + defectos)
+    var por = {};
+    data.forEach(function(r){
+      var t = r.tejedor || 'Sin nombre';
+      if(!por[t]) por[t] = {faltantes:0, defectos:0};
+      if(r.tipo==='Faltante') por[t].faltantes += r.cantidad||0;
+      else por[t].defectos += r.cantidad||0;
+    });
+    var lista = Object.keys(por).map(function(k){
+      return {nombre:k, total:por[k].faltantes+por[k].defectos, faltantes:por[k].faltantes, defectos:por[k].defectos};
+    }).sort(function(a,b){ return b.total-a.total; }).slice(0,6);
+
+    if(!lista.length){
+      el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
+      return;
+    }
+    var maxV = lista[0].total || 1;
+    el.innerHTML = lista.map(function(t,i){
+      var pct = Math.round(t.total/maxV*100);
+      return '<div style="margin-bottom:14px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+t.nombre+'</span>'
+          +'<span style="font-size:12px;flex-shrink:0">'
+            +'<span style="color:var(--warning)">F:'+t.faltantes+'</span>'
+            +' <span style="color:var(--danger)">D:'+t.defectos+'</span>'
+          +'</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:var(--danger);border-radius:6px;transition:width .5s"></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }).catch(function(){
+    el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
+  });
+}
+
+function dashCargarMaqDefectos(){
+  var el = document.getElementById('dashMaqDefChart');
+  if(!el) return;
+  var anio = window._dashAnio || new Date().getFullYear();
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  call('getReposiciones').then(function(data){
+    // Solo defectos, filtrados por periodo
+    data = (data||[]).filter(function(r){
+      if(r.tipo !== 'Defecto') return false;
+      var f = new Date(r.fecha);
+      if(isNaN(f)) return false;
+      if(mes !== '') return f.getFullYear()===anio && f.getMonth()===parseInt(mes);
+      return f.getFullYear()===anio;
+    });
+    // Agrupar por máquina
+    var por = {};
+    data.forEach(function(r){
+      var m = r.maquina || 'Sin máquina';
+      por[m] = (por[m]||0) + (r.cantidad||0);
+    });
+    var lista = Object.keys(por).map(function(k){
+      return {nombre:k, total:por[k]};
+    }).sort(function(a,b){ return b.total-a.total; }).slice(0,6);
+
+    if(!lista.length){
+      el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin defectos registrados</div>';
+      return;
+    }
+    var maxV = lista[0].total || 1;
+    el.innerHTML = lista.map(function(m){
+      var pct = Math.round(m.total/maxV*100);
+      return '<div style="margin-bottom:14px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">Máq. '+m.nombre+'</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--danger);flex-shrink:0">'+m.total+' def.</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:#ef4444;border-radius:6px;transition:width .5s"></div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+  }).catch(function(){
+    el.innerHTML='<div style="color:var(--text-muted);padding:16px;font-size:13px">Sin datos</div>';
+  });
+}
 
 function dashCargarReposiciones(periodo){
   var anio = window._dashAnio || new Date().getFullYear();
@@ -2736,5 +2837,3 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
-
-
