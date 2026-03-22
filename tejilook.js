@@ -1883,8 +1883,16 @@ function _verResumenModal(noOrden){
         '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin entradas para esta orden</p></div>';
       return;
     }
-    var html = '<div style="margin-bottom:16px">'
-      +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Modelo: <strong>'+(res.modelo||noOrden)+'</strong></div>'
+
+    // Fix 1: modelo es objeto, obtener nombre correcto
+    var modeloNom = '';
+    if(res.modelo){
+      if(typeof res.modelo === 'string') modeloNom = res.modelo;
+      else modeloNom = res.modelo.modelo || res.modelo.nombre || res.modelo.noOrden || noOrden;
+    } else { modeloNom = noOrden; }
+
+    var html = '<div id="resumenEntPrint">'
+      +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Modelo: <strong>'+modeloNom+'</strong></div>'
       +res.resumen.map(function(t){
         var pct = t.esperadoFrente > 0 ? Math.min(100, Math.round(t.entradaFrente/t.esperadoFrente*100)) : 0;
         var ok  = t.faltaFrente === 0;
@@ -1900,28 +1908,69 @@ function _verResumenModal(noOrden){
             +'<div>Man='+t.entradaManga+'/'+t.esperadoManga+'</div>'
           +'</div>'
         +'</div>';
-      }).join('')
-    +'</div>';
+      }).join('');
 
-    // Historial de entradas con formato Fr= Esp= Man=
+    // Fix 2: historial con nombreTrabajador correcto
     if(res.registros && res.registros.length){
-      html += '<div style="font-weight:600;font-size:13px;margin-bottom:8px">Historial de entradas</div>'
+      html += '<div style="font-weight:600;font-size:13px;margin:12px 0 8px">Historial de entradas</div>'
         +'<div class="table-wrap"><table class="table" style="font-size:12px">'
         +'<thead><tr><th>Fecha</th><th>Trabajador</th><th>Tallas</th></tr></thead><tbody>'
         +res.registros.map(function(r){
+          // Fix: el campo se llama nombreTrabajador, no trabajador
+          var trab = r.nombreTrabajador || r.trabajador || r.nombre || '—';
           var tallas = (r.tallas||[]).map(function(t){
-            return '<span class="badge badge-gray" style="margin:2px;font-size:11px">'+t.talla+': Fr='+t.frentes+' Esp='+t.espaldas+' Man='+t.mangas+'</span>';
+            return '<span class="badge badge-gray" style="margin:2px;font-size:11px">'
+              +t.talla+': Fr='+t.frentes+' Esp='+t.espaldas+' Man='+t.mangas+'</span>';
           }).join('');
-          return '<tr><td>'+fmt(r.fecha)+'</td><td>'+r.trabajador+'</td><td>'+tallas+'</td></tr>';
+          return '<tr><td>'+fmt(r.fecha)+'</td><td>'+trab+'</td><td>'+tallas+'</td></tr>';
         }).join('')
         +'</tbody></table></div>';
     }
+    html += '</div>';
+
+    // Fix 3: botón imprimir
+    html = '<div style="text-align:right;margin-bottom:12px">'
+      +'<button class="btn btn-primary btn-sm" onclick="_imprimirResumenEntradas()"><i class="fas fa-print"></i> Imprimir</button>'
+      +'</div>' + html;
 
     document.getElementById('expContent').innerHTML = html;
   }).catch(function(e){
     document.getElementById('expContent').innerHTML =
       '<div style="color:var(--danger);padding:16px">Error: '+(e.message||e)+'</div>';
   });
+}
+
+function _imprimirResumenEntradas(){
+  var el = document.getElementById('resumenEntPrint');
+  if(!el) return;
+  var titulo = document.getElementById('expTitle').textContent || 'Resumen Entradas';
+  var cfg = window._sysConfig || {};
+  var logo = cfg.sistLogoUrl
+    ? '<img src="'+cfg.sistLogoUrl+'" style="height:40px;object-fit:contain;margin-bottom:8px">'
+    : '<div style="font-size:20px;font-weight:900">TejiLook</div>';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>'+titulo+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#000}'
+    +'.badge-success{background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}'
+    +'.badge-warning{background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}'
+    +'.badge-gray{background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:12px;font-size:11px;display:inline-block;margin:2px}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px}'
+    +'th{background:#f1f5f9;padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:11px;text-transform:uppercase}'
+    +'td{padding:8px;border-bottom:1px solid #e2e8f0}'
+    +'.prog{height:6px;background:#e2e8f0;border-radius:4px;margin-top:4px}'
+    +'.prog-ok{background:#10b981;height:100%;border-radius:4px}'
+    +'.prog-warn{background:#f59e0b;height:100%;border-radius:4px}'
+    +'</style></head><body>'
+    +'<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:16px">'
+      +logo
+      +'<div><div style="font-size:16px;font-weight:700">'+titulo+'</div>'
+      +'<div style="font-size:12px;color:#64748b">'+new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})+'</div></div>'
+    +'</div>'
+    +el.innerHTML
+    +'</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 400);
 }
 
 function renderVerEntradas(){
