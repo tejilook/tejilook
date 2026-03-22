@@ -700,7 +700,23 @@ _clientes=[];
 
 function limpiarMaquila(){ ['maqId','maqNombre','maqDestino'].forEach(i=>document.getElementById(i).value=''); document.getElementById('maqActivo').value='SI'; document.getElementById('formMaqTitle').textContent='Nueva Maquila'; }
 
-function limpiarModelo(){ ['modId','modNoOrden','modNombre','modFecha','modFotoUrl'].forEach(i=>document.getElementById(i).value=''); document.getElementById('modCliente').value=''; document.getElementById('modMaquila').value=''; document.getElementById('modFotoFile').value=''; document.getElementById('modFotoPreview').style.display='none'; _modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}]; renderModeloTallasBody(); document.getElementById('formModTitle').textContent='Nuevo Modelo'; }
+function limpiarModelo(){
+  ['modId','modNoOrden','modNombre','modFecha','modFotoUrl'].forEach(function(i){
+    var el=document.getElementById(i); if(el) el.value='';
+  });
+  var cSel=document.getElementById('modCliente'); if(cSel) cSel.value='';
+  var mSel=document.getElementById('modMaquila'); if(mSel) mSel.value='';
+  var ff=document.getElementById('modFotoFile'); if(ff) ff.value='';
+  var fp=document.getElementById('modFotoPreview'); if(fp) fp.style.display='none';
+  var fa=document.getElementById('modFotoArea');
+  if(fa){ fa.querySelector('i') && (fa.querySelector('i').style.display='');
+           fa.querySelector('p') && (fa.querySelector('p').style.display=''); }
+  _modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}];
+  renderModeloTallasBody();
+  // Título — usar el del modal (formModTitle ya no existe)
+  var t=document.getElementById('modalModeloTitle'); if(t) t.textContent='Nuevo Modelo';
+}
+
 _modelos=[];
 
 function limpiarTrab(){ ['trabId','trabNombre','trabFotoUrl'].forEach(i=>document.getElementById(i).value=''); document.getElementById('trabActivo').value='SI'; document.getElementById('trabFotoPreview').style.display='none'; document.getElementById('trabFotoFile').value=''; document.getElementById('formTrabTitle').textContent='Nuevo Trabajador'; }
