@@ -598,6 +598,7 @@ renderModeloTallasBody();
 document.getElementById('formModTitle').textContent='Editar Modelo';
 window.scrollTo(0,0);
 
+  _poblarSelectsModelo();
   openModal('modalModelo');
 }
 
@@ -869,15 +870,9 @@ call(id?'editarTrabajador':'crearTrabajador',data).then(()=>{closeModal('modalTr
 function renderModelos(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(function(res){
-    var clientes=res[0], maquilas=res[1];
-    var cSel=document.getElementById('modCliente');
-    var mSel=document.getElementById('modMaquila');
-    if(cSel) cSel.innerHTML='<option value="">— Seleccionar —</option>'+clientes.map(function(c){
-      return '<option value="'+c.id+'" data-nombre="'+c.cliente+'">'+c.cliente+'</option>';
-    }).join('');
-    if(mSel) mSel.innerHTML='<option value="">— Sin maquila —</option>'+maquilas.map(function(m){
-      return '<option value="'+m.id+'" data-nombre="'+m.maquila+'">'+m.maquila+'</option>';
-    }).join('');
+    window._modClientes = res[0]||[];
+    window._modMaquilas = res[1]||[];
+    _poblarSelectsModelo();
     document.getElementById('main').innerHTML =
       '<div class="page-header">'
         +'<div></div>'
@@ -895,7 +890,35 @@ function renderModelos(){
   });
 }
 
+function _poblarSelectsModelo(){
+  var cSel = document.getElementById('modCliente');
+  var mSel = document.getElementById('modMaquila');
+  if(cSel) cSel.innerHTML = '<option value="">— Seleccionar —</option>'
+    +(window._modClientes||[]).map(function(c){
+      return '<option value="'+c.id+'" data-nombre="'+c.cliente+'">'+c.cliente+'</option>';
+    }).join('');
+  if(mSel) mSel.innerHTML = '<option value="">— Sin maquila —</option>'
+    +(window._modMaquilas||[]).map(function(m){
+      return '<option value="'+m.id+'" data-nombre="'+m.maquila+'">'+m.maquila+'</option>';
+    }).join('');
+}
+
 function abrirNuevoModelo(){
+  // Si no hay datos de clientes cargados, cargarlos primero
+  if(!window._modClientes || !window._modClientes.length){
+    Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(function(res){
+      window._modClientes = res[0]||[];
+      window._modMaquilas = res[1]||[];
+      _poblarSelectsModelo();
+      _abrirModalModelo();
+    });
+  } else {
+    _poblarSelectsModelo();
+    _abrirModalModelo();
+  }
+}
+
+function _abrirModalModelo(){
   limpiarModelo();
   var t = document.getElementById('modalModeloTitle');
   if(t) t.textContent = 'Nuevo Modelo';
