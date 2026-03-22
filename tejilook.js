@@ -870,23 +870,38 @@ function renderModelos(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(function(res){
     var clientes=res[0], maquilas=res[1];
-    // Populate modal selects
     var cSel=document.getElementById('modCliente');
     var mSel=document.getElementById('modMaquila');
-    if(cSel){ cSel.innerHTML='<option value="">— Seleccionar —</option>'+clientes.map(function(c){return '<option value="'+c.id+'" data-nombre="'+c.cliente+'">'+c.cliente+'</option>';}).join(''); }
-    if(mSel){ mSel.innerHTML='<option value="">— Sin maquila —</option>'+maquilas.map(function(m){return '<option value="'+m.id+'" data-nombre="'+m.maquila+'">'+m.maquila+'</option>';}).join(''); }
+    if(cSel) cSel.innerHTML='<option value="">— Seleccionar —</option>'+clientes.map(function(c){
+      return '<option value="'+c.id+'" data-nombre="'+c.cliente+'">'+c.cliente+'</option>';
+    }).join('');
+    if(mSel) mSel.innerHTML='<option value="">— Sin maquila —</option>'+maquilas.map(function(m){
+      return '<option value="'+m.id+'" data-nombre="'+m.maquila+'">'+m.maquila+'</option>';
+    }).join('');
     document.getElementById('main').innerHTML =
-      '<div class="page-header"><div><h1 style="display:none"></h1></div>'
-        +'<button class="btn btn-primary" onclick="limpiarModelo();document.getElementById(\'modalModeloTitle\').textContent=\'Nuevo Modelo\';_modeloTallas=[{talla:\'CH\',cantidad:0},{talla:\'M\',cantidad:0},{talla:\'G\',cantidad:0}];renderModeloTallasBody();openModal(\'modalModelo\')"><i class="fas fa-plus"></i> Nuevo Modelo</button>'
+      '<div class="page-header">'
+        +'<div></div>'
+        +'<button class="btn btn-primary" onclick="abrirNuevoModelo()"><i class="fas fa-plus"></i> Nuevo Modelo</button>'
       +'</div>'
       +'<div class="card">'
         +'<div class="card-header"><div class="card-title">Modelos Registrados</div>'
-          +'<div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="buscarModelo" oninput="filtrarModelos()"></div>'
+          +'<div class="search-bar" style="width:200px"><i class="fas fa-search"></i>'
+            +'<input type="text" placeholder="Buscar..." id="buscarModelo" oninput="filtrarModelos()">'
+          +'</div>'
         +'</div>'
         +'<div id="tablaModelos"><div class="loading"><div class="spinner"></div></div></div>'
       +'</div>';
     cargarTablaModelos();
   });
+}
+
+function abrirNuevoModelo(){
+  limpiarModelo();
+  var t = document.getElementById('modalModeloTitle');
+  if(t) t.textContent = 'Nuevo Modelo';
+  _modeloTallas = [{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}];
+  renderModeloTallasBody();
+  openModal('modalModelo');
 }
 
 function calcModeloTotal(){
