@@ -2705,6 +2705,8 @@ function doLogin(){
       return;
     }
     try { localStorage.setItem('tejilook_user', JSON.stringify(r)); } catch(e){}
+    // Registrar usuario en cache del servidor para Bitácora
+    call('setUsuarioSesion', r.nombre+' ('+r.usuario+')', r.rol).catch(function(){});
     _initApp(r);
   }).catch(function(e){
     errEl.textContent='Error: '+e.message;
