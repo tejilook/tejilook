@@ -9,63 +9,32 @@ const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', 
   document.getElementById('sidebar').classList.toggle('open');
   var ov = document.getElementById('sidebarOverlay');
   if(ov) ov.classList.toggle('open');
-} function toggleMenu(el){ el.classList.toggle('open'); const sub=el.nextElementSibling; if(sub&&sub.classList.contains('nav-submenu')) sub.classList.toggle('open'); } function toggleDark(){ isDark=!isDark; localStorage.setItem('dark',isDark?'1':'0'); document.documentElement.setAttribute('data-theme',isDark?'dark':''); document.getElementById('darkIcon').className=isDark?'fas fa-sun':'fas fa-moon'; } function openModal(id){ document.getElementById(id).classList.add('open'); } function closeModal(id){ document.getElementById(id).classList.remove('open'); } document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); })); function toast(msg,type='success'){ const icons={success:'fas fa-check-circle',danger:'fas fa-exclamation-circle',warning:'fas fa-triangle-exclamation'}; const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="${icons[type]||icons.success}"></i> ${msg}`; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.remove(),3800); } function fmt(date){ if(!date) return '—'; const d=new Date(date); if(isNaN(d)) return date; return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); } function badge(text){ const map={ 'SI':'<span class="badge badge-success">Activo</span>', 'NO':'<span class="badge badge-danger">Inactivo</span>', 'Superusuario':'<span class="badge badge-danger">Superusuario</span>', 'Administrador':'<span class="badge badge-info">Admin</span>', 'Supervisor':'<span class="badge badge-warning">Supervisor</span>', }; return map[text]||`<span class="badge badge-gray">${text||'—'}</span>`; } function call(fn,...args){ return new Promise((res,rej)=>{ let r=google.script.run.withSuccessHandler(res).withFailureHandler(rej); r[fn](...args); }); } function fileToBase64(file){
+} function toggleMenu(el){ el.classList.toggle('open'); const sub=el.nextElementSibling; if(sub&&sub.classList.contains('nav-submenu')) sub.classList.toggle('open'); } function toggleDark(){ isDark=!isDark; localStorage.setItem('dark',isDark?'1':'0'); document.documentElement.setAttribute('data-theme',isDark?'dark':''); document.getElementById('darkIcon').className=isDark?'fas fa-sun':'fas fa-moon'; } function openModal(id){ document.getElementById(id).classList.add('open'); } function closeModal(id){ document.getElementById(id).classList.remove('open'); } document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); })); function toast(msg,type='success'){ const icons={success:'fas fa-check-circle',danger:'fas fa-exclamation-circle',warning:'fas fa-triangle-exclamation'}; const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="${icons[type]||icons.success}"></i> ${msg}`; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.remove(),3800); } function fmt(date){ if(!date) return '—'; const d=new Date(date); if(isNaN(d)) return date; return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); } function badge(text){ const map={ 'SI':'<span class="badge badge-success">Activo</span>', 'NO':'<span class="badge badge-danger">Inactivo</span>', 'Superusuario':'<span class="badge badge-danger">Superusuario</span>', 'Administrador':'<span class="badge badge-info">Admin</span>', 'Supervisor':'<span class="badge badge-warning">Supervisor</span>', }; return map[text]||`<span class="badge badge-gray">${text||'—'}</span>`; } function call(fn,...args){ return new Promise((res,rej)=>{ let r=google.script.run.withSuccessHandler(res).withFailureHandler(rej); r[fn](...args); }); } function fileToBase64(file, maxW, quality){
+  maxW    = maxW    || 900;
+  quality = quality || 0.75;
   return new Promise(function(res, rej){
-    var MAX_W = 800;
-    var QUALITY = 0.70;
     var reader = new FileReader();
     reader.onerror = rej;
-    reader.onload = function(e){
+    reader.onload = function(ev){
       var img = new Image();
       img.onerror = rej;
       img.onload = function(){
-        // Si ya es pequeña no reescalar
         var w = img.width, h = img.height;
-        if(w > MAX_W){
-          h = Math.round(h * MAX_W / w);
-          w = MAX_W;
-        }
+        if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+        if(h > maxW){ w = Math.round(w * maxW / h); h = maxW; }
         var canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        var compressed = canvas.toDataURL('image/jpeg', QUALITY);
-        var originalKB  = Math.round(file.size/1024);
-        var compressedKB = Math.round(compressed.length * 0.75 / 1024);
-        console.log('Imagen: '+originalKB+'KB → '+compressedKB+'KB ('+w+'x'+h+'px)');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var compressed   = canvas.toDataURL('image/jpeg', quality);
+        var originalKB   = Math.round(file.size/1024);
+        var compressedKB = Math.round(compressed.length*0.75/1024);
+        console.log('Imagen: '+originalKB+'KB \u2192 '+compressedKB+'KB ('+w+'\xd7'+h+'px)');
         res(compressed);
       };
-      img.src = e.target.result;
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
-} function renderDashboard(){
-  var ahora = new Date();
-  var anioActual = ahora.getFullYear();
-
-  // Inicializar filtros
-  if(!window._dashAnio) window._dashAnio = anioActual;
-  if(window._dashMes === undefined) window._dashMes = ahora.getMonth(); // mes actual por defecto
-
-  // Generar años desde 2024 hasta año actual + 1
-  var anioOpts = '';
-  for(var y = 2024; y <= anioActual + 1; y++){
-    anioOpts += '<option value="'+y+'"'+(y===window._dashAnio?' selected':'')+'>'+y+'</option>';
-  }
-
-  // Meses
-  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var mesOpts = '<option value=""'+(window._dashMes===''?' selected':'')+'>Todo el año</option>';
-  meses.forEach(function(m,i){
-    mesOpts += '<option value="'+i+'"'+(window._dashMes===i?' selected':'')+'>'+m+'</option>';
-  });
-
-  document.getElementById('main').innerHTML =
-    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'        +'<select class="form-control form-select" id="dashAnioSel" style="width:90px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +anioOpts        +'</select>'        +'<select class="form-control form-select" id="dashMesSel" style="width:140px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'          +mesOpts        +'</select>'      +'</div>'    +'</div>'    +'<div id="dashContent" style="padding:0 24px 32px">'      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'    +'</div>';
-
-  dashCargar();
 }
 
 function dashFiltroChange(){
@@ -721,16 +690,22 @@ _modelos=[];
 
 function limpiarTrab(){ ['trabId','trabNombre','trabFotoUrl'].forEach(i=>document.getElementById(i).value=''); document.getElementById('trabActivo').value='SI'; document.getElementById('trabFotoPreview').style.display='none'; document.getElementById('trabFotoFile').value=''; document.getElementById('formTrabTitle').textContent='Nuevo Trabajador'; }
 
-function previewImg(input, previewId, areaId){
-const file=input.files[0];
-if(!file) return;
-const reader=new FileReader();
-reader.onload=e=>{
-const img=document.getElementById(previewId);
-img.src=e.target.result; img.style.display='block';
-};
-reader.readAsDataURL(file);
+function previewImg(input, previewId, areaId, maxW, quality){
+  var file = input.files[0];
+  if(!file) return;
+  fileToBase64(file, maxW||600, quality||0.80).then(function(dataUrl){
+    var img = document.getElementById(previewId);
+    if(img){ img.src = dataUrl; img.style.display = 'block'; }
+    var area = document.getElementById(areaId);
+    if(area){
+      var ico = area.querySelector('i.fas');
+      var txt = area.querySelector('p');
+      if(ico) ico.style.opacity = '0.3';
+      if(txt) txt.style.display = 'none';
+    }
+  });
 }
+
 async function guardarCliente(){
 const id=document.getElementById('clienteId').value;
 const nombre=document.getElementById('clienteNombre').value.trim();
