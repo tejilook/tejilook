@@ -37,6 +37,37 @@ const titles={ dashboard:'Dashboard', clientes:'Clientes', maquilas:'Maquilas', 
   });
 }
 
+function renderDashboard(){
+  var ahora = new Date();
+  var anioActual = ahora.getFullYear();
+  if(!window._dashAnio) window._dashAnio = anioActual;
+  if(window._dashMes === undefined) window._dashMes = ahora.getMonth();
+
+  var anioOpts = '';
+  for(var y = 2024; y <= anioActual+1; y++){
+    anioOpts += '<option value="'+y+'"'+(y===window._dashAnio?' selected':'')+'>'+y+'</option>';
+  }
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mesOpts = '<option value=""'+(window._dashMes===''?' selected':'')+'>Todo el año</option>';
+  meses.forEach(function(m,i){
+    mesOpts += '<option value="'+i+'"'+(window._dashMes===i?' selected':'')+'>'+m+'</option>';
+  });
+
+  document.getElementById('main').innerHTML =
+    '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'
+      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        +'<select class="form-control form-select" id="dashAnioSel" style="width:90px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'+anioOpts+'</select>'
+        +'<select class="form-control form-select" id="dashMesSel" style="width:140px;padding:6px 10px;font-size:13px" onchange="dashFiltroChange()">'+mesOpts+'</select>'
+      +'</div>'
+    +'</div>'
+    +'<div id="dashContent" style="padding:0 24px 32px">'
+      +'<div class="loading"><div class="spinner"></div> Cargando estadísticas...</div>'
+    +'</div>';
+
+  dashCargar();
+}
+
 function dashFiltroChange(){
   var sel = document.getElementById('dashAnioSel');
   var mes = document.getElementById('dashMesSel');
