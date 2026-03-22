@@ -1048,6 +1048,35 @@ function renderEntradas(){
   });
 }
 
+
+function cargarTablasEntrada(){
+  var el = document.getElementById('tablaEntradaHoy');
+  if(!el) return;
+  call('getEntradas').then(function(data){
+    var hoy = new Date().toISOString().slice(0,10);
+    var hoyData = (data||[]).filter(function(e){
+      return String(e.fecha).slice(0,10) === hoy;
+    });
+    if(!hoyData.length){
+      el.innerHTML='<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin entradas hoy</p></div>';
+      return;
+    }
+    el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr>'
+      +'<th>Trabajador</th><th>Orden</th><th>Modelo</th><th>Tallas</th></tr></thead><tbody>'
+      +hoyData.map(function(e){
+        return '<tr>'
+          +'<td>'+e.nombreTrabajador+'</td>'
+          +'<td><strong>'+e.noOrden+'</strong></td>'
+          +'<td>'+(e.nombreModelo||'—')+'</td>'
+          +'<td style="font-size:12px;color:var(--text-muted)">'+(e.cuellos||0)+' cuellos</td>'
+        +'</tr>';
+      }).join('')
+      +'</tbody></table></div>';
+  }).catch(function(){
+    el.innerHTML='<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin entradas hoy</p></div>';
+  });
+}
+
 function renderEntradaTallasBody(){
 document.getElementById('entTallasBody').innerHTML=_entradaTallas.map((t,i)=>`
 <tr>
@@ -1843,6 +1872,58 @@ function dashCargarReposiciones(periodo){
   });
 }
 
+
+function _verResumenModal(noOrden){
+  document.getElementById('expTitle').textContent = 'Resumen Entradas — Orden: '+noOrden;
+  document.getElementById('expContent').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  openModal('modalExpediente');
+  call('getResumenEntradas', noOrden).then(function(res){
+    if(!res || res.ok===false || !res.resumen || !res.resumen.length){
+      document.getElementById('expContent').innerHTML =
+        '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin entradas para esta orden</p></div>';
+      return;
+    }
+    var html = '<div style="margin-bottom:16px">'
+      +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Modelo: <strong>'+(res.modelo||noOrden)+'</strong></div>'
+      +res.resumen.map(function(t){
+        var pct = t.esperadoFrente > 0 ? Math.min(100, Math.round(t.entradaFrente/t.esperadoFrente*100)) : 0;
+        var ok  = t.faltaFrente === 0;
+        return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">'
+          +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+            +'<strong>Talla '+t.talla+'</strong>'
+            +'<span class="badge '+(ok?'badge-success':'badge-warning')+'">'+(ok?'Completa':'Pendiente')+'</span>'
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">'
+            +'<div>Fr='+t.entradaFrente+'/'+t.esperadoFrente
+              +'<div class="progress" style="margin-top:4px"><div class="progress-bar '+(pct>=100?'progress-ok':'progress-warn')+'" style="width:'+pct+'%"></div></div></div>'
+            +'<div>Esp='+t.entradaEspalda+'/'+t.esperadoEspalda+'</div>'
+            +'<div>Man='+t.entradaManga+'/'+t.esperadoManga+'</div>'
+          +'</div>'
+        +'</div>';
+      }).join('')
+    +'</div>';
+
+    // Historial de entradas con formato Fr= Esp= Man=
+    if(res.registros && res.registros.length){
+      html += '<div style="font-weight:600;font-size:13px;margin-bottom:8px">Historial de entradas</div>'
+        +'<div class="table-wrap"><table class="table" style="font-size:12px">'
+        +'<thead><tr><th>Fecha</th><th>Trabajador</th><th>Tallas</th></tr></thead><tbody>'
+        +res.registros.map(function(r){
+          var tallas = (r.tallas||[]).map(function(t){
+            return '<span class="badge badge-gray" style="margin:2px;font-size:11px">'+t.talla+': Fr='+t.frentes+' Esp='+t.espaldas+' Man='+t.mangas+'</span>';
+          }).join('');
+          return '<tr><td>'+fmt(r.fecha)+'</td><td>'+r.trabajador+'</td><td>'+tallas+'</td></tr>';
+        }).join('')
+        +'</tbody></table></div>';
+    }
+
+    document.getElementById('expContent').innerHTML = html;
+  }).catch(function(e){
+    document.getElementById('expContent').innerHTML =
+      '<div style="color:var(--danger);padding:16px">Error: '+(e.message||e)+'</div>';
+  });
+}
+
 function renderVerEntradas(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   // Cargar modelos para lookup de nombre
@@ -1883,7 +1964,7 @@ function renderVerEntradas(){
       +'<td><strong>'+e.noOrden+'</strong></td>'
       +'<td>'+(modelo||'<span style="color:var(--text-light)">\u2014</span>')+'</td>'
       +'<td>'+(e.nombreTrabajador||'\u2014')+'</td>'
-      +'<td><button class="btn btn-info btn-sm" onclick="navigate(\'entradas\');setTimeout(function(){ document.getElementById(\'resNoOrden\').value=\''+e.noOrden+'\';verResumenEntrada(); },500)"><i class="fas fa-chart-bar"></i> Ver resumen</button></td>'
+      +'<td><button class="btn btn-info btn-sm" onclick="_verResumenModal(\''+e.noOrden+'\')" title="Ver resumen"><i class="fas fa-chart-bar"></i> Ver resumen</button></td>'
     +'</tr>';
   }).join('');
   document.getElementById('tablaEntradas').innerHTML =
