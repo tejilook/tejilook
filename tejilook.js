@@ -2277,6 +2277,8 @@ function guardarUsuario(){
   var rol = (document.getElementById('usrRol')||{value:'Administrador'}).value;
   if(!usr){ toast('El nombre de usuario es requerido','danger'); return; }
   if(!id && !pw){ toast('La contraseña es requerida para nuevos usuarios','danger'); return; }
+  if(!id && pw && pw.length < 4){ toast('La contraseña debe tener al menos 4 caracteres','danger'); return; }
+  // Si editando y pw vacía, enviar vacío — el backend conserva la actual
   var data = { id:id, nombre:nom||usr, usuario:usr, password:pw, rol:rol, activo:'SI' };
   var fn = id ? 'editarUsuario' : 'crearUsuario';
   call(fn, data).then(function(r){
