@@ -2295,22 +2295,6 @@ function guardarUsuario(){
   }).catch(function(e){ toast(e.message,'danger'); });
 }
 
-function guardarUsuario(){
-  var nombre   = document.getElementById('usrNombre').value.trim();
-  var usuario  = document.getElementById('usrUsuario').value.trim();
-  var password = document.getElementById('usrPassword').value.trim();
-  var rol      = document.getElementById('usrRol').value;
-  if(!usuario){ toast('El usuario es requerido','danger'); return; }
-  if(!password||password.length<4){ toast('La contrasena debe tener al menos 4 caracteres','danger'); return; }
-  call('crearUsuario',{nombre:nombre||usuario,usuario:usuario,password:password,rol:rol})
-    .then(function(r){
-      if(!r||!r.ok){ toast((r&&r.msg)||'Error al crear usuario','danger'); return; }
-      toast('Usuario creado ✓');
-      ['usrNombre','usrUsuario','usrPassword'].forEach(function(id){ document.getElementById(id).value=''; });
-      renderUsuarios();
-    }).catch(function(err){ toast(err.message,'danger'); });
-}
-
 function renderBitacora(){
   if(currentUser && currentUser.rol !== 'Superusuario'){
     document.getElementById('main').innerHTML='<div class="empty-state"><i class="fas fa-lock"></i><p>Acceso solo para Superusuario</p></div>';
