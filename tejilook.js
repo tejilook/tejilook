@@ -1183,15 +1183,39 @@ function _abrirModalSalida(){
 }
 
 function renderVerSalidasInline(data){
-  var el=document.getElementById('tablaSalidasList');
+  var el = document.getElementById('tablaSalidasList');
   if(!el) return;
-  if(!data.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-truck-fast"></i><p>Sin salidas registradas</p></div>'; return; }
-  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Orden</th><th>Modelo</th><th>Maquila</th><th>Suéteres</th><th>Acc.</th></tr></thead><tbody>'
+  if(!data.length){
+    el.innerHTML='<div class="empty-state"><i class="fas fa-truck-fast"></i><p>Sin salidas registradas</p></div>';
+    return;
+  }
+  el.innerHTML =
+    '<div class="table-wrap"><table class="table">'
+    +'<thead><tr>'
+      +'<th>Fecha</th><th>Orden</th><th>Modelo</th><th>Maquila</th><th>Suéteres</th><th>Acc.</th>'
+    +'</tr></thead><tbody>'
     +data.map(function(s){
-      return '<tr><td>'+fmt(s.fechaSalida||s.fecha)+'</td><td><strong>'+(s.noOrden||'—')+'</strong></td>'
-        +'<td>'+(s.nombreModelo||'—')+'</td><td>'+(s.nombreMaquila||'—')+'</td>'
+      var id = s.id||'';
+      return '<tr>'
+        +'<td>'+fmt(s.fechaSalida||s.fecha)+'</td>'
+        +'<td><strong>'+(s.noOrden||'—')+'</strong></td>'
+        +'<td>'+(s.nombreModelo||'—')+'</td>'
+        +'<td>'+(s.nombreMaquila||'—')+'</td>'
         +'<td><strong>'+(s.totalSueteres||0)+'</strong></td>'
-        +'<td><button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="if(confirm(\'¿Eliminar esta salida?\'))call(\'eliminarSalida\',(s||{}).id).then(function(){toast(\'Eliminada\',\'warning\');renderSalidas();})"><i class="fas fa-trash"></i></button></td>'
+        +'<td style="display:flex;gap:6px;flex-wrap:nowrap">'
+          // Ver expediente por NoOrden
+          +'<button class="btn btn-info btn-sm btn-icon" title="Ver expediente" onclick="navigate(\'buscar\',\''+s.noOrden+'\')">'
+            +'<i class="fas fa-search"></i>'
+          +'</button>'
+          // Formato de impresión
+          +'<button class="btn btn-primary btn-sm btn-icon" title="Formato de salida" onclick="verFormato(\''+id+'\')">'
+            +'<i class="fas fa-print"></i>'
+          +'</button>'
+          // Eliminar
+          +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="if(confirm(\'¿Eliminar esta salida?\'))call(\'eliminarSalida\',\''+id+'\').then(function(){toast(\'Eliminada\',\'warning\');renderSalidas();})">'
+            +'<i class="fas fa-trash"></i>'
+          +'</button>'
+        +'</td>'
       +'</tr>';
     }).join('')
     +'</tbody></table></div>';
