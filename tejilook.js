@@ -97,7 +97,8 @@ function dashCargar(){
     }
     dashRender(d);
   }).catch(function(e){
-    document.getElementById('dashContent').innerHTML='<div style="color:var(--danger);padding:20px">Error: '+e.message+'</div>';
+    var el=document.getElementById('dashContent');
+    if(el) el.innerHTML='<div style="color:var(--danger);padding:20px">Error: '+e.message+'</div>';
   });
 }
 
@@ -2245,7 +2246,7 @@ function renderUsuarios(){
 }
 
 function _nuevoUsuarioForm(){
-  // Limpiar modal
+  window._editingUsrId = '';
   ['usrId','usrNombre','usrUsuario'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
@@ -2259,18 +2260,21 @@ function _editarUsuarioForm(idOrObj){
   var u = (typeof idOrObj === 'string')
     ? (window._usuariosCache && window._usuariosCache[idOrObj]) || {id:idOrObj}
     : idOrObj;
-  var g = function(id){ return document.getElementById(id); };
-  var uid=g('usrId');       if(uid) uid.value   = u.id||'';
-  var n  =g('usrNombre');   if(n)   n.value     = u.nombre||'';
-  var us =g('usrUsuario');  if(us)  us.value    = u.usuario||'';
-  var pw =g('usrPassword'); if(pw)  pw.value    = '';
-  var rol=g('usrRol');      if(rol) rol.value   = u.rol||'Administrador';
+  // Guardar id en variable global — más confiable que campo oculto
+  window._editingUsrId = u.id || idOrObj || '';
+  var g = function(i){ return document.getElementById(i); };
+  var uid=g('usrId'); if(uid) uid.value = window._editingUsrId;
+  var n  =g('usrNombre');   if(n)   n.value  = u.nombre||'';
+  var us =g('usrUsuario');  if(us)  us.value = u.usuario||'';
+  var pw =g('usrPassword'); if(pw)  pw.value = '';
+  var rol=g('usrRol');      if(rol) rol.value = u.rol||'Administrador';
   var t  =g('modalUsuarioTitle'); if(t) t.textContent = 'Editar Usuario';
   openModal('modalUsuario');
 }
 
 function guardarUsuario(){
-  var id  = (document.getElementById('usrId')||{value:''}).value.trim();
+  // Usar variable global como fuente principal del id
+  var id  = window._editingUsrId || (document.getElementById('usrId')||{value:''}).value.trim();
   var nom = (document.getElementById('usrNombre')||{value:''}).value.trim();
   var usr = (document.getElementById('usrUsuario')||{value:''}).value.trim();
   var pw  = (document.getElementById('usrPassword')||{value:''}).value.trim();
