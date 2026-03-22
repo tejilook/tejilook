@@ -2715,6 +2715,11 @@ function doLogin(){
 }
 
 function doLogout(){
+  // Registrar cierre de sesión en bitácora
+  try {
+    var u = currentUser ? (currentUser.usuario||currentUser.nombre||'') : '';
+    call('logCierreSesion', u).catch(function(){});
+  } catch(e){}
   try { localStorage.removeItem('tejilook_user'); } catch(e){}
   currentUser = null;
   _showLogin();
