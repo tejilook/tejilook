@@ -2201,53 +2201,83 @@ function renderUsuarios(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   call('getUsuarios').then(function(data){
     data = data || [];
-    var tblHtml = !data.length
-      ? '<div class="empty-state"><i class="fas fa-users"></i><p>Sin usuarios</p></div>'
-      : '<div class="table-wrap"><table class="table"><thead><tr>'
-          +'<th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acc.</th>'
-        +'</tr></thead><tbody>'
-        + data.map(function(u){
-            var uid = u.id;
-            return '<tr>'
-              +'<td><strong>'+u.nombre+'</strong></td>'
-              +'<td style="font-family:monospace;font-size:13px">'+u.usuario+'</td>'
-              +'<td>'+badge(u.rol)+'</td>'
-              +'<td>'+badge(u.activo)+'</td>'
-              +'<td style="white-space:nowrap">'
-                +'<button class="btn btn-warning btn-sm btn-icon" title="Desactivar" '
-                  +'onclick="call(\'desactivarUsuario\',\''+uid+'\').then(function(){toast(\'Desactivado\',\'warning\');renderUsuarios();})"><i class="fas fa-ban"></i></button> '
-                +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" '
-                  +'onclick="if(confirm(\'\u00bfEliminar permanentemente?\'))call(\'eliminarUsuario\',\''+uid+'\').then(function(){toast(\'Eliminado\',\'danger\');renderUsuarios();})"><i class="fas fa-trash"></i></button>'
-              +'</td>'
-            +'</tr>';
-          }).join('')
-        +'</tbody></table></div>';
+    var rows = data.map(function(u){
+      var activo = u.activo === 'SI';
+      return '<tr>'
+        +'<td><strong>'+u.nombre+'</strong></td>'
+        +'<td style="font-family:monospace;font-size:13px">'+u.usuario+'</td>'
+        +'<td>'+badge(u.rol)+'</td>'
+        +'<td>'+badge(u.activo)+'</td>'
+        +'<td style="white-space:nowrap;display:flex;gap:4px">'
+          // Editar
+          +'<button class="btn btn-ghost btn-sm btn-icon" title="Editar" '
+            +'onclick="_editarUsuarioForm('+JSON.stringify(u).replace(/'/g,"\\'")+')"><i class="fas fa-pencil"></i></button>'
+          // Activar / Desactivar según estado
+          +(activo
+            ? '<button class="btn btn-warning btn-sm btn-icon" title="Desactivar" '
+                +'onclick="call(\'desactivarUsuario\',\''+u.id+'\').then(function(){toast(\'Desactivado\',\'warning\');renderUsuarios();})"><i class="fas fa-ban"></i></button>'
+            : '<button class="btn btn-success btn-sm btn-icon" title="Activar" '
+                +'onclick="call(\'activarUsuario\',\''+u.id+'\').then(function(){toast(\'Activado ✓\');renderUsuarios();})"><i class="fas fa-check"></i></button>'
+          )
+          // Eliminar
+          +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" '
+            +'onclick="if(confirm(\'¿Eliminar permanentemente?\'))call(\'eliminarUsuario\',\''+u.id+'\').then(function(){toast(\'Eliminado\',\'danger\');renderUsuarios();})"><i class="fas fa-trash"></i></button>'
+        +'</td>'
+      +'</tr>';
+    }).join('');
+
     document.getElementById('main').innerHTML =
-      '<div class="page-header"><div><h1>Usuarios del Sistema</h1></div></div>'
-      +'<div class="dual-grid">'
-        +'<div class="card">'
-          +'<div class="card-title" style="margin-bottom:16px">Nuevo Usuario</div>'
-          +'<div class="form-group"><label class="form-label">Nombre completo</label>'
-            +'<input class="form-control" id="usrNombre" placeholder="Ej: Ana Lopez"></div>'
-          +'<div class="form-group"><label class="form-label">Usuario *</label>'
-            +'<input class="form-control" id="usrUsuario" placeholder="Ej: ana.lopez" autocomplete="off"></div>'
-          +'<div class="form-group"><label class="form-label">Contrasena *</label>'
-            +'<input class="form-control" id="usrPassword" type="password" placeholder="Minimo 4 caracteres" autocomplete="new-password"></div>'
-          +'<div class="form-group"><label class="form-label">Rol</label>'
-            +'<select class="form-control form-select" id="usrRol">'
-              +'<option value="Administrador">Administrador</option>'
-              +'<option value="Supervisor">Supervisor</option>'
-              +'<option value="Superusuario">Superusuario</option>'
-            +'</select></div>'
-          +'<button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">'
-            +'<i class="fas fa-save"></i> Crear Usuario</button>'
-        +'</div>'
-        +'<div class="card">'
-          +'<div class="card-title" style="margin-bottom:16px">Usuarios Registrados</div>'
-          + tblHtml
-        +'</div>'
+      '<div class="page-header"><div></div>'
+        +'<button class="btn btn-primary" onclick="_nuevoUsuarioForm()"><i class="fas fa-plus"></i> Nuevo Usuario</button>'
+      +'</div>'
+      +'<div class="card">'
+        +'<div class="card-header"><div class="card-title">Usuarios Registrados</div></div>'
+        +(rows ? '<div class="table-wrap"><table class="table"><thead><tr>'
+            +'<th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acc.</th>'
+          +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+          : '<div class="empty-state"><i class="fas fa-users"></i><p>Sin usuarios</p></div>')
       +'</div>';
   }).catch(function(err){ toast(err.message,'danger'); });
+}
+
+function _nuevoUsuarioForm(){
+  // Limpiar modal
+  ['usrId','usrNombre','usrUsuario'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var pw=document.getElementById('usrPassword'); if(pw) pw.value='';
+  var rol=document.getElementById('usrRol'); if(rol) rol.value='Administrador';
+  var t=document.getElementById('modalUsuarioTitle'); if(t) t.textContent='Nuevo Usuario';
+  openModal('modalUsuario');
+}
+
+function _editarUsuarioForm(u){
+  var el=function(id){ return document.getElementById(id); };
+  var uid=el('usrId'); if(uid) uid.value=u.id||'';
+  var n=el('usrNombre'); if(n) n.value=u.nombre||'';
+  var us=el('usrUsuario'); if(us) us.value=u.usuario||'';
+  var pw=el('usrPassword'); if(pw) pw.value=''; // no mostrar password
+  var rol=el('usrRol'); if(rol) rol.value=u.rol||'Administrador';
+  var t=el('modalUsuarioTitle'); if(t) t.textContent='Editar Usuario';
+  openModal('modalUsuario');
+}
+
+function guardarUsuario(){
+  var id  = (document.getElementById('usrId')||{value:''}).value.trim();
+  var nom = (document.getElementById('usrNombre')||{value:''}).value.trim();
+  var usr = (document.getElementById('usrUsuario')||{value:''}).value.trim();
+  var pw  = (document.getElementById('usrPassword')||{value:''}).value.trim();
+  var rol = (document.getElementById('usrRol')||{value:'Administrador'}).value;
+  if(!usr){ toast('El nombre de usuario es requerido','danger'); return; }
+  if(!id && !pw){ toast('La contraseña es requerida para nuevos usuarios','danger'); return; }
+  var data = { id:id, nombre:nom||usr, usuario:usr, password:pw, rol:rol, activo:'SI' };
+  var fn = id ? 'editarUsuario' : 'crearUsuario';
+  call(fn, data).then(function(r){
+    if(r && r.ok === false){ toast(r.msg||'Error','danger'); return; }
+    closeModal('modalUsuario');
+    toast(id ? 'Usuario actualizado ✓' : 'Usuario creado ✓');
+    renderUsuarios();
+  }).catch(function(e){ toast(e.message,'danger'); });
 }
 
 function guardarUsuario(){
