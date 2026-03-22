@@ -2201,6 +2201,10 @@ function renderUsuarios(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   call('getUsuarios').then(function(data){
     data = data || [];
+    // Cache para editar por id
+    window._usuariosCache = {};
+    data.forEach(function(u){ window._usuariosCache[u.id] = u; });
+
     var rows = data.map(function(u){
       var activo = u.activo === 'SI';
       return '<tr>'
@@ -2211,7 +2215,7 @@ function renderUsuarios(){
         +'<td style="white-space:nowrap;display:flex;gap:4px">'
           // Editar
           +'<button class="btn btn-ghost btn-sm btn-icon" title="Editar" '
-            +'onclick="_editarUsuarioForm('+JSON.stringify(u).replace(/'/g,"\\'")+')"><i class="fas fa-pencil"></i></button>'
+            +'onclick="_editarUsuarioForm(\''+u.id+'\')"><i class="fas fa-pencil"></i></button>'
           // Activar / Desactivar según estado
           +(activo
             ? '<button class="btn btn-warning btn-sm btn-icon" title="Desactivar" '
@@ -2251,14 +2255,17 @@ function _nuevoUsuarioForm(){
   openModal('modalUsuario');
 }
 
-function _editarUsuarioForm(u){
-  var el=function(id){ return document.getElementById(id); };
-  var uid=el('usrId'); if(uid) uid.value=u.id||'';
-  var n=el('usrNombre'); if(n) n.value=u.nombre||'';
-  var us=el('usrUsuario'); if(us) us.value=u.usuario||'';
-  var pw=el('usrPassword'); if(pw) pw.value=''; // no mostrar password
-  var rol=el('usrRol'); if(rol) rol.value=u.rol||'Administrador';
-  var t=el('modalUsuarioTitle'); if(t) t.textContent='Editar Usuario';
+function _editarUsuarioForm(idOrObj){
+  var u = (typeof idOrObj === 'string')
+    ? (window._usuariosCache && window._usuariosCache[idOrObj]) || {id:idOrObj}
+    : idOrObj;
+  var g = function(id){ return document.getElementById(id); };
+  var uid=g('usrId');       if(uid) uid.value   = u.id||'';
+  var n  =g('usrNombre');   if(n)   n.value     = u.nombre||'';
+  var us =g('usrUsuario');  if(us)  us.value    = u.usuario||'';
+  var pw =g('usrPassword'); if(pw)  pw.value    = '';
+  var rol=g('usrRol');      if(rol) rol.value   = u.rol||'Administrador';
+  var t  =g('modalUsuarioTitle'); if(t) t.textContent = 'Editar Usuario';
   openModal('modalUsuario');
 }
 
