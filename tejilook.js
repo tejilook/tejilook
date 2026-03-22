@@ -314,7 +314,7 @@ function dashDrawDonut(canvasId, labels, values, colors){
 }
 function renderEmbLineas(){ var html=''; _embLineas.forEach(function(l,i){ var tot=(l.bolsas||0)*(l.pzBolsa||0); html+='<div style="display:grid;grid-template-columns:120px 130px 130px 110px 36px;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--border)">'; html+='<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Talla</div><input class="form-control" style="padding:6px 10px" value="'+l.talla+'" placeholder="CH / M / G" onchange="_embLineas['+i+'].talla=this.value"></div>'; html+='<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Cant. bolsas</div><input class="form-control" type="number" min="1" style="padding:6px 10px" value="'+l.bolsas+'" onchange="_embLineas['+i+'].bolsas=+this.value;renderEmbLineas()"></div>'; html+='<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Pzas por bolsa</div><input class="form-control" type="number" min="1" style="padding:6px 10px" value="'+l.pzBolsa+'" onchange="_embLineas['+i+'].pzBolsa=+this.value;renderEmbLineas()"></div>'; html+='<div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total suéteres</div><div style="background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-weight:700;color:var(--primary);font-size:15px;text-align:center">'+tot+'</div></div>'; html+='<div style="padding-bottom:2px"><button class="btn btn-ghost btn-sm btn-icon" onclick="_embLineas.splice('+i+',1);renderEmbLineas()"><i class="fas fa-times"></i></button></div>'; html+='</div>'; }); document.getElementById('embLineasBody').innerHTML=html; calcEmbTotal(); }
 
-function guardarEmbolsado(){ var noOrden=document.getElementById('embOrden').value; var editId=document.getElementById('embEditId').value; if(!noOrden){toast('Selecciona un NoOrden','danger');return;} var lineas=_embLineas.filter(function(l){return l.talla&&l.bolsas>0&&l.pzBolsa>0;}); if(!lineas.length){toast('Agrega al menos una línea con talla y cantidades','danger');return;} var tallasMap={}; lineas.forEach(function(l){if(!tallasMap[l.talla])tallasMap[l.talla]={talla:l.talla,grupos:[]};tallasMap[l.talla].grupos.push({cantidadBolsas:l.bolsas,pzPorBolsa:l.pzBolsa});}); var tallas=Object.values(tallasMap); var data={id:editId,fecha:document.getElementById('embFecha').value,noOrden:noOrden,observaciones:document.getElementById('embObs').value,tallas:tallas}; var fn=editId?'editarEmbolsado':'registrarEmbolsado'; call(fn,data).then(function(){toast(editId?'Embolsado actualizado':'Embolsado registrado ✓');cancelarEditEmb();setTimeout(function(){cargarTablaEmbolsado();},800);}).catch(function(e){toast(e.message,'danger');}); }
+function guardarEmbolsado(){ var noOrden=document.getElementById('embOrden').value; var editId=document.getElementById('embEditId').value; if(!noOrden){toast('Selecciona un NoOrden','danger');return;} var lineas=_embLineas.filter(function(l){return l.talla&&l.bolsas>0&&l.pzBolsa>0;}); if(!lineas.length){toast('Agrega al menos una línea con talla y cantidades','danger');return;} var tallasMap={}; lineas.forEach(function(l){if(!tallasMap[l.talla])tallasMap[l.talla]={talla:l.talla,grupos:[]};tallasMap[l.talla].grupos.push({cantidadBolsas:l.bolsas,pzPorBolsa:l.pzBolsa});}); var tallas=Object.values(tallasMap); var data={id:editId,fecha:document.getElementById('embFecha').value,noOrden:noOrden,observaciones:document.getElementById('embObs').value,tallas:tallas}; var fn=editId?'editarEmbolsado':'registrarEmbolsado'; call(fn,data).then(function(){closeModal('modalEmbolsado');toast(editId?'Embolsado actualizado':'Embolsado registrado ✓');renderEmbolsado();;cancelarEditEmb();setTimeout(function(){cargarTablaEmbolsado();},800);}).catch(function(e){toast(e.message,'danger');}); }
 
 function cancelarEditEmb(){ document.getElementById('embEditId').value=''; document.getElementById('embFormTitle').textContent='Nuevo Registro'; document.getElementById('btnCancelEmb').style.display='none'; document.getElementById('embOrden').value=''; document.getElementById('embObs').value=''; document.getElementById('embDisponible').style.display='none'; _embLineas=[{talla:'',bolsas:1,pzBolsa:50}]; renderEmbLineas(); }
 
@@ -637,7 +637,7 @@ const tallas=_entradaTallas.filter(t=>t.talla&&(t.frentes>0||t.espaldas>0||t.man
 if(!tallas.length){toast('Ingresa al menos una talla con piezas','danger');return;}
 const infoEl=document.getElementById('entModeloInfo');
 call('registrarEntrada',{fecha:document.getElementById('entFecha').value,idTrabajador:sel.value,nombreTrabajador:sel.value?sel.options[sel.selectedIndex].dataset.nombre:'',noOrden,tallas}).then(()=>{
-toast('Entrada registrada ✓');
+closeModal('modalEntrada');toast('Entrada registrada ✓');cargarTablasEntrada();;
 _entradaTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
 renderEntradaTallasBody();
 document.getElementById('resNoOrden').value=noOrden;
@@ -662,7 +662,7 @@ const modFotoFile=document.getElementById('modFotoFile');
 let modFotoBase64='';
 if(modFotoFile.files[0]) modFotoBase64=await fileToBase64(modFotoFile.files[0]);
 const data={id,noOrden,modelo:nombre,fechaEntrega:document.getElementById('modFecha').value,idCliente:selCli.value,nombreCliente:selCli.options[selCli.selectedIndex].dataset.nombre,idMaquila:selMaq.value,nombreMaquila:selMaq.value?selMaq.options[selMaq.selectedIndex].dataset.nombre:'',activo:'SI',tallas,fotoBase64:modFotoBase64,fotoUrl:document.getElementById('modFotoUrl').value};
-call(id?'editarModelo':'crearModelo',data).then(()=>{closeModal('modalModelo');toast('Modelo guardado ✓');limpiarModelo();cargarTablaModelos();}).catch(e=>toast(e.message,'danger'));
+call(id?'editarModelo':'crearModelo',data).then(()=>{closeModal('modalModelo');toast('Modelo guardado ✓');cargarTablaModelos();;limpiarModelo();cargarTablaModelos();}).catch(e=>toast(e.message,'danger'));
 }
 
 function guardarProduccion(){
@@ -678,7 +678,7 @@ if(!r.ok){
 toast(r.errores.join(' | '),'danger');
 return;
 }
-toast('Producción registrada ✓');
+closeModal('modalProduccion');toast('Producción registrada ✓');cargarTablaProd();;
 _prodTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
 renderProdTallasBody();
 document.getElementById('prodObs').value='';
@@ -867,69 +867,27 @@ call(id?'editarTrabajador':'crearTrabajador',data).then(()=>{closeModal('modalTr
 }
 
 function renderModelos(){
-document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(([clientes,maquilas])=>{
-document.getElementById('main').innerHTML=`
-<div class="page-header"><div><h1>Modelos / Órdenes</h1><p>Cada modelo está ligado a un NoOrden único</p></div></div>
-<div class="dual-grid">
-<div class="card">
-<div class="card-header"><div class="card-title" id="formModTitle">Nuevo Modelo</div></div>
-<input type="hidden" id="modId">
-<input type="hidden" id="modFotoUrl">
-<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="modNoOrden" placeholder="Ej: 54821"></div>
-<div class="form-group"><label class="form-label">Nombre del Modelo *</label><input class="form-control" id="modNombre" placeholder="Ej: Everest"></div>
-<div class="form-group"><label class="form-label">Foto del Modelo</label>
-<div class="img-upload-area" id="modFotoArea" onclick="document.getElementById('modFotoFile').click()" style="cursor:pointer;border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--surface-2)">
-<input type="file" id="modFotoFile" accept="image/*" style="display:none" onchange="previewImg(this,'modFotoPreview','modFotoArea')">
-<i class="fas fa-camera" style="font-size:24px;color:var(--text-muted)"></i>
-<p style="font-size:12px;color:var(--text-muted);margin:6px 0 0">Clic para subir foto</p>
-<img id="modFotoPreview" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:8px;margin-top:8px">
-</div>
-</div>
-<div class="form-group"><label class="form-label">Fecha Límite de Entrega</label><input class="form-control" id="modFecha" type="date"></div>
-<div class="form-group"><label class="form-label">Cliente *</label>
-<select class="form-control form-select" id="modCliente">
-<option value="">— Seleccionar —</option>
-${clientes.map(c=>`<option value="${c.id}" data-nombre="${c.cliente}">${c.cliente}</option>`).join('')}
-</select>
-</div>
-<div class="form-group"><label class="form-label">Maquila (si aplica)</label>
-<select class="form-control form-select" id="modMaquila">
-<option value="">— Sin maquila —</option>
-${maquilas.map(m=>`<option value="${m.id}" data-nombre="${m.maquila}">${m.maquila}</option>`).join('')}
-</select>
-</div>
-<hr class="divider">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-<div class="card-title">Tallas del Modelo</div>
-<button class="btn btn-ghost btn-sm" onclick="addModeloTalla()"><i class="fas fa-plus"></i> Agregar</button>
-</div>
-<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-<i class="fas fa-info-circle" style="color:var(--info)"></i>
-1 suéter = 1 frente + 1 espalda + 2 mangas (conversión automática)
-</p>
-<table class="tallas-table"><thead><tr><th>Talla</th><th>Cant. Suéteres</th><th>→ F / E / M</th><th></th></tr></thead>
-<tbody id="modeloTallasBody"></tbody>
-<tfoot><tr><td colspan="2" style="text-align:right;font-weight:600;padding:8px">Total suéteres: <span id="modeloTotalSuet">0</span></td><td colspan="2"></td></tr></tfoot>
-</table>
-<div style="margin-top:20px;display:flex;gap:8px">
-<button class="btn btn-primary" onclick="guardarModelo()"><i class="fas fa-save"></i> Guardar</button>
-<button class="btn btn-ghost" onclick="limpiarModelo()"><i class="fas fa-times"></i></button>
-</div>
-</div>
-<div class="card">
-<div class="card-header"><div class="card-title">Modelos Registrados</div>
-<div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="buscarModelo" oninput="filtrarModelos()"></div>
-</div>
-<div id="tablaModelos"><div class="loading"><div class="spinner"></div></div></div>
-</div>
-</div>`;
-_modeloTallas=[{talla:'CH',cantidad:0},{talla:'M',cantidad:0},{talla:'G',cantidad:0}];
-renderModeloTallasBody();
-cargarTablaModelos();
-});
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  Promise.all([call('getClientesActivos'),call('getMaquilasActivas')]).then(function(res){
+    var clientes=res[0], maquilas=res[1];
+    // Populate modal selects
+    var cSel=document.getElementById('modCliente');
+    var mSel=document.getElementById('modMaquila');
+    if(cSel){ cSel.innerHTML='<option value="">— Seleccionar —</option>'+clientes.map(function(c){return '<option value="'+c.id+'" data-nombre="'+c.cliente+'">'+c.cliente+'</option>';}).join(''); }
+    if(mSel){ mSel.innerHTML='<option value="">— Sin maquila —</option>'+maquilas.map(function(m){return '<option value="'+m.id+'" data-nombre="'+m.maquila+'">'+m.maquila+'</option>';}).join(''); }
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div><h1 style="display:none"></h1></div>'
+        +'<button class="btn btn-primary" onclick="limpiarModelo();document.getElementById(\'modalModeloTitle\').textContent=\'Nuevo Modelo\';_modeloTallas=[{talla:\'CH\',cantidad:0},{talla:\'M\',cantidad:0},{talla:\'G\',cantidad:0}];renderModeloTallasBody();openModal(\'modalModelo\')"><i class="fas fa-plus"></i> Nuevo Modelo</button>'
+      +'</div>'
+      +'<div class="card">'
+        +'<div class="card-header"><div class="card-title">Modelos Registrados</div>'
+          +'<div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Buscar..." id="buscarModelo" oninput="filtrarModelos()"></div>'
+        +'</div>'
+        +'<div id="tablaModelos"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>';
+    cargarTablaModelos();
+  });
 }
-
 
 function calcModeloTotal(){
   var total = (_modeloTallas||[]).reduce(function(s,t){ return s+(+t.cantidad||0); },0);
@@ -1001,53 +959,32 @@ function renderTablaModelos(data){
 let _entradaTallas=[];
 
 function renderEntradas(){
-document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-call('getTrabajadoresActivos').then(trabajadores=>{
-document.getElementById('main').innerHTML=`
-<div class="page-header"><div><h1>Entradas</h1><p>Registro de piezas que entran a producción por NoOrden</p></div></div>
-<div class="dual-grid" style="grid-template-columns:400px 1fr">
-<div class="card">
-<div class="card-header"><div class="card-title">Nueva Entrada</div></div>
-<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="entFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-<div class="form-group"><label class="form-label">Trabajador que registra</label>
-<select class="form-control form-select" id="entTrab">
-<option value="">— Seleccionar —</option>
-${trabajadores.map(t=>`<option value="${t.id}" data-nombre="${t.nombre}">${t.nombre}</option>`).join('')}
-</select>
-</div>
-<div class="form-group">
-<label class="form-label">No. Orden *</label>
-<div style="display:flex;gap:8px">
-<input class="form-control" id="entNoOrden" placeholder="Ej: 54821">
-<button class="btn btn-info" onclick="cargarTallasEntrada()"><i class="fas fa-search"></i></button>
-</div>
-<div id="entModeloInfo" style="margin-top:6px;font-size:13px;color:var(--success)"></div>
-</div>
-<hr class="divider">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-<div class="card-title">Tallas a Ingresar</div>
-<button class="btn btn-ghost btn-sm" onclick="addEntradaTalla()"><i class="fas fa-plus"></i> Agregar talla</button>
-</div>
-<table class="tallas-table" id="entTallasTable">
-<thead><tr><th>Talla</th><th>Frentes</th><th>Espaldas</th><th>Mangas</th><th></th></tr></thead>
-<tbody id="entTallasBody"></tbody>
-</table>
-<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="guardarEntrada()"><i class="fas fa-save"></i> Registrar Entrada</button>
-</div>
-<div class="card">
-<div class="card-header">
-<div class="card-title">Resumen de Entradas por NoOrden</div>
-</div>
-<div style="display:flex;gap:8px;margin-bottom:16px">
-<input class="form-control" id="resNoOrden" placeholder="NoOrden para ver resumen" style="max-width:200px">
-<button class="btn btn-primary" onclick="verResumenEntrada()"><i class="fas fa-chart-bar"></i> Ver</button>
-</div>
-<div id="resumenEntradas"><div class="empty-state"><i class="fas fa-inbox"></i><p>Ingresa un NoOrden para ver el resumen de entradas y lo que falta</p></div></div>
-</div>
-</div>`;
-_entradaTallas=[];
-addEntradaTalla();
-});
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getTrabajadoresActivos').then(function(trabajadores){
+    // Populate modal select
+    var tSel=document.getElementById('entTrab');
+    if(tSel){ tSel.innerHTML='<option value="">— Seleccionar —</option>'+trabajadores.map(function(t){return '<option value="'+t.id+'" data-nombre="'+t.nombre+'">'+t.nombre+'</option>';}).join(''); }
+    var fi=document.getElementById('entFecha'); if(fi) fi.value=new Date().toISOString().slice(0,10);
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div></div>'
+        +'<button class="btn btn-primary" onclick="var fi=document.getElementById(\'entFecha\');if(fi)fi.value=new Date().toISOString().slice(0,10);_entradaTallas=[];addEntradaTalla();openModal(\'modalEntrada\')"><i class="fas fa-plus"></i> Nueva Entrada</button>'
+      +'</div>'
+      +'<div class="card" style="margin-bottom:16px">'
+        +'<div class="card-header"><div class="card-title">Resumen por NoOrden</div></div>'
+        +'<div style="display:flex;gap:8px;margin-bottom:16px">'
+          +'<input class="form-control" id="resNoOrden" placeholder="Ingresa un NoOrden" style="max-width:200px">'
+          +'<button class="btn btn-primary" onclick="verResumenEntrada()"><i class="fas fa-chart-bar"></i> Ver</button>'
+        +'</div>'
+        +'<div id="resumenEntradas"><div class="empty-state"><i class="fas fa-inbox"></i><p>Ingresa un NoOrden para ver el resumen</p></div></div>'
+      +'</div>'
+      +'<div class="card">'
+        +'<div class="card-header"><div class="card-title">Entradas del día</div>'
+          +'<button class="btn btn-ghost btn-sm" onclick="cargarTablasEntrada()"><i class="fas fa-refresh"></i></button>'
+        +'</div>'
+        +'<div id="tablaEntradaHoy"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>';
+    cargarTablasEntrada();
+  });
 }
 
 function renderEntradaTallasBody(){
@@ -1062,51 +999,24 @@ document.getElementById('entTallasBody').innerHTML=_entradaTallas.map((t,i)=>`
 }
 
 function renderProduccion(){
-document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-call('getTrabajadoresActivos').then(trabajadores=>{
-const procesos=['Revisión','Hilvanado','Plancha Banco','Plancha Rodillo','Corte','Remalle'];
-document.getElementById('main').innerHTML=`
-<div class="page-header"><div><h1>Producción de Trabajadores</h1><p>El sistema valida que no se exceda lo que entró por talla</p></div></div>
-<div class="dual-grid" style="grid-template-columns:420px 1fr">
-<div class="card">
-<div class="card-header"><div class="card-title">Nuevo Registro</div></div>
-<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="prodFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-<div class="form-group"><label class="form-label">Trabajador *</label>
-<select class="form-control form-select" id="prodTrab">
-<option value="">— Seleccionar —</option>
-${trabajadores.map(t=>`<option value="${t.id}" data-nombre="${t.nombre}">${t.nombre} (${t.puesto})</option>`).join('')}
-</select>
-</div>
-<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="prodNoOrden" placeholder="Ej: 54821"></div>
-<div class="form-group"><label class="form-label">Proceso *</label>
-<select class="form-control form-select" id="prodProceso">
-${procesos.map(p=>`<option>${p}</option>`).join('')}
-</select>
-</div>
-<hr class="divider">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-<div class="card-title">Tallas Trabajadas</div>
-<button class="btn btn-ghost btn-sm" onclick="addProdTalla()"><i class="fas fa-plus"></i></button>
-</div>
-<div style="background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--info)">
-<i class="fas fa-shield-halved"></i> El sistema valida automáticamente que la suma de producción no supere las entradas registradas para cada talla y proceso.
-</div>
-<table class="tallas-table"><thead><tr><th>Talla</th><th>Frentes</th><th>Espaldas</th><th>Mangas</th><th></th></tr></thead>
-<tbody id="prodTallasBody"></tbody></table>
-<div class="form-group" style="margin-top:16px"><label class="form-label">Observaciones</label>
-<textarea class="form-control" id="prodObs" rows="2" placeholder="Ej: Por falta de hilvanado, trabajó en revisión"></textarea>
-</div>
-<button class="btn btn-primary" style="width:100%" onclick="guardarProduccion()"><i class="fas fa-save"></i> Registrar</button>
-</div>
-<div class="card">
-<div class="card-header"><div class="card-title">Producción del Día</div></div>
-<div id="tablaProd"><div class="loading"><div class="spinner"></div></div></div>
-</div>
-</div>`;
-_prodTallas=[{talla:'',frentes:0,espaldas:0,mangas:0}];
-renderProdTallasBody();
-cargarTablaProd();
-});
+  document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  call('getTrabajadoresActivos').then(function(trabajadores){
+    // Populate modal select
+    var tSel=document.getElementById('prodTrab');
+    if(tSel){ tSel.innerHTML='<option value="">— Seleccionar —</option>'+trabajadores.map(function(t){return '<option value="'+t.id+'" data-nombre="'+t.nombre+'">'+t.nombre+' ('+t.puesto+')</option>';}).join(''); }
+    var pf=document.getElementById('prodFecha'); if(pf) pf.value=new Date().toISOString().slice(0,10);
+    document.getElementById('main').innerHTML =
+      '<div class="page-header"><div></div>'
+        +'<button class="btn btn-primary" onclick="var pf=document.getElementById(\'prodFecha\');if(pf)pf.value=new Date().toISOString().slice(0,10);_prodTallas=[{talla:\'\',frentes:0,espaldas:0,mangas:0}];renderProdTallasBody();openModal(\'modalProduccion\')"><i class="fas fa-plus"></i> Nuevo Registro</button>'
+      +'</div>'
+      +'<div class="card">'
+        +'<div class="card-header"><div class="card-title">Producción del Día</div>'
+          +'<button class="btn btn-ghost btn-sm" onclick="cargarTablaProd()"><i class="fas fa-refresh"></i></button>'
+        +'</div>'
+        +'<div id="tablaProd"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>';
+    cargarTablaProd();
+  });
 }
 
 function cargarTablaProd(){
@@ -1150,23 +1060,28 @@ document.getElementById('prodTallasBody').innerHTML=_prodTallas.map((t,i)=>`
 }
 
 function renderEmbolsado(){
-document.getElementById('main').innerHTML=`
-<div class="page-header"><div><h1>Embolsado</h1></div></div>
-<div class="card" style="max-width:560px">
-<div class="form-group"><label class="form-label">Fecha</label><input class="form-control" id="embFecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-<div class="form-group"><label class="form-label">No. Orden *</label><input class="form-control" id="embOrden" placeholder="Ej: 54821"></div>
-<hr class="divider">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-<div class="card-title">Tallas Embolsadas</div>
-<button class="btn btn-ghost btn-sm" onclick="_embTallas.push({talla:'',cantidad:0});renderEmbTallas()"><i class="fas fa-plus"></i></button>
-</div>
-<table class="tallas-table"><thead><tr><th>Talla</th><th>Cantidad</th><th></th></tr></thead>
-<tbody id="embTallasBody"></tbody>
-<tfoot><tr><td colspan="2" style="text-align:right;font-weight:600;padding:8px">Total: <span id="embTotal">0</span></td><td></td></tr></tfoot>
-</table>
-<button class="btn btn-primary" style="margin-top:20px;width:100%" onclick="guardarEmbolsado()"><i class="fas fa-box-open"></i> Registrar Embolsado</button>
-</div>`;
-renderEmbTallas();
+  document.getElementById('main').innerHTML =
+    '<div class="page-header"><div></div>'
+      +'<button class="btn btn-primary" onclick="var ef=document.getElementById(\'embFecha\');if(ef)ef.value=new Date().toISOString().slice(0,10);_embTallas=[{talla:\'\',cantidad:0}];renderEmbTallas();openModal(\'modalEmbolsado\')"><i class="fas fa-plus"></i> Registrar Embolsado</button>'
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-header"><div class="card-title">Embolsados recientes</div>'
+        +'<button class="btn btn-ghost btn-sm" onclick="renderEmbolsado()"><i class="fas fa-refresh"></i></button>'
+      +'</div>'
+      +'<div id="tablaEmbolsados"><div class="loading"><div class="spinner"></div></div></div>'
+    +'</div>';
+  call('getEmbolsados').then(function(data){
+    var el=document.getElementById('tablaEmbolsados');
+    if(!el) return;
+    if(!data||!data.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin registros</p></div>'; return; }
+    el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Orden</th><th>Tallas</th><th>Total</th></tr></thead><tbody>'
+      +data.slice(0,20).map(function(e){
+        return '<tr><td>'+fmt(e.fecha)+'</td><td><strong>'+e.noOrden+'</strong></td>'
+          +'<td>'+(e.tallas||[]).map(function(t){return '<span class="badge badge-gray" style="margin:1px">'+t.talla+': '+t.totalTalla+'</span>';}).join('')+'</td>'
+          +'<td>'+(e.tallas||[]).reduce(function(s,t){return s+(+t.totalTalla||0);},0)+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div>';
+  }).catch(function(){ document.getElementById('tablaEmbolsados').innerHTML='<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin registros</p></div>'; });
 }
 
 function renderEmbTallas(){
@@ -1182,107 +1097,44 @@ document.getElementById('embTotal').textContent=_embTallas.reduce((s,t)=>s+(+t.c
 function renderSalidas(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   call('getMaquilasActivas').then(function(maquilas){
-    var maqOpts = maquilas.map(function(m){
-      return '<option value="'+m.id+'" data-nombre="'+m.maquila+'" data-destino="'+(m.destino||'')+'">'+m.maquila+'</option>';
-    }).join('');
-
-    var inp = 'style="background:var(--surface-2);color:var(--text-muted)"';
-
+    var mSel=document.getElementById('salMaquila');
+    if(mSel){ mSel.innerHTML='<option value="">— Seleccionar —</option>'+maquilas.map(function(m){return '<option value="'+m.id+'" data-nombre="'+m.maquila+'" data-destino="'+(m.destino||'')+'">'+m.maquila+'</option>';}).join(''); }
+    var sf=document.getElementById('salFecha'); if(sf) sf.value=new Date().toISOString().slice(0,10);
     document.getElementById('main').innerHTML =
-      ''
-     +'<div class="card">'
-       +'<div class="card-header"><div class="card-title">Datos de la Salida</div></div>'
-
-       // Fila 1: Fecha | NoOrden | Maquila
-       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px">'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Fecha *</label>'
-           +'<input class="form-control" id="salFecha" type="date" value="'+new Date().toISOString().slice(0,10)+'">'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">No. Orden *</label>'
-           +'<input class="form-control" id="salNoOrden" placeholder="Ej: 54821" oninput="autoSalidaInfo()">'
-           +'<div id="salInfo" style="font-size:12px;margin-top:4px;min-height:16px"></div>'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Maquila *</label>'
-           +'<select class="form-control form-select" id="salMaquila">'
-             +'<option value="">— Seleccionar —</option>'+maqOpts
-           +'</select>'
-         +'</div>'
-       +'</div>'
-
-       // Fila 2: Modelo | Cliente | Fecha Entrega
-       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Modelo</label>'
-           +'<input class="form-control" id="salModelo" readonly placeholder="Auto" '+inp+'>'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Cliente</label>'
-           +'<input class="form-control" id="salCliente" readonly placeholder="Auto" '+inp+'>'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Fecha de Entrega</label>'
-           +'<input class="form-control" id="salCad" type="date">'
-         +'</div>'
-       +'</div>'
-
-       +'<hr class="divider">'
-
-       // Tabla bolsas
-       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-         +'<div class="card-title">Detalle por Bolsa</div>'
-         +'<button class="btn btn-ghost btn-sm" onclick="addSalidaLinea()"><i class="fas fa-plus"></i> Agregar línea</button>'
-       +'</div>'
-       +'<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px"><i class="fas fa-info-circle" style="color:var(--info)"></i> Cada fila = un grupo de bolsas. Misma talla puede tener varias filas.</p>'
-       +'<div style="overflow-x:auto;margin-bottom:16px">'
-         +'<table class="tallas-table"><thead><tr>'
-           +'<th>Talla</th><th>Bultos</th><th>Pz por Bulto</th><th>Total Pz</th><th></th>'
-         +'</tr></thead>'
-         +'<tbody id="salidaLineasBody"></tbody>'
-         +'<tfoot><tr>'
-           +'<td colspan="3" style="text-align:right;font-weight:600;padding:8px">Total suéteres:</td>'
-           +'<td colspan="2"><span id="salidaTotal" style="font-weight:700;color:var(--primary);font-size:15px">0</span></td>'
-         +'</tr></tfoot>'
-         +'</table>'
-       +'</div>'
-
-       +'<hr class="divider">'
-
-       // Tabla cuellos
-       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-         +'<div class="card-title">Cuellos por Talla</div>'
-         +'<button class="btn btn-ghost btn-sm" onclick="addSalidaCuello()"><i class="fas fa-plus"></i> Agregar talla</button>'
-       +'</div>'
-       +'<div style="overflow-x:auto;margin-bottom:16px">'
-         +'<table class="tallas-table"><thead><tr>'
-           +'<th>Talla</th><th>Cantidad de Cuellos</th><th></th>'
-         +'</tr></thead>'
-         +'<tbody id="salidaCuellosBody"></tbody>'
-         +'</table>'
-       +'</div>'
-
-       +'<hr class="divider">'
-
-       // Extras: Tapa Costura | Hilo | Muestra | Moldes
-       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Tapa Costura (m)</label>'
-           +'<input class="form-control" id="salTapa" type="number" step="0.1" value="0" min="0">'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Hilo (kg)</label>'
-           +'<input class="form-control" id="salHilo" type="number" step="0.1" value="0" min="0">'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Muestra Entregada</label>'
-           +'<select class="form-control form-select" id="salMuestra"><option value="NO">NO</option><option value="SI">SÍ</option></select>'
-         +'</div>'
-         +'<div class="form-group" style="margin:0"><label class="form-label">Moldes Entregados</label>'
-           +'<select class="form-control form-select" id="salMoldes"><option value="NO">NO</option><option value="SI">SÍ</option></select>'
-         +'</div>'
-       +'</div>'
-
-       +'<button class="btn btn-primary" style="width:100%" onclick="guardarSalida()"><i class="fas fa-truck-fast"></i> Registrar Salida</button>'
-     +'</div>';
-
-    _salidaLineas = [];
-    _salidaCuellos = [];
-    addSalidaLinea(); addSalidaLinea(); addSalidaLinea();
-    addSalidaCuello();
+      '<div class="page-header"><div></div>'
+        +'<button class="btn btn-primary" onclick="_abrirModalSalida()"><i class="fas fa-plus"></i> Nueva Salida</button>'
+      +'</div>'
+      +'<div class="card">'
+        +'<div class="card-header"><div class="card-title">Salidas Registradas</div></div>'
+        +'<div id="tablaSalidasList"><div class="loading"><div class="spinner"></div></div></div>'
+      +'</div>';
+    call('getSalidas').then(function(data){
+      renderVerSalidasInline(data||[]);
+    });
   });
+}
+
+function _abrirModalSalida(){
+  var sf=document.getElementById('salFecha'); if(sf) sf.value=new Date().toISOString().slice(0,10);
+  _salidaLineas=[]; _salidaCuellos=[];
+  addSalidaLinea(); addSalidaLinea(); addSalidaLinea();
+  addSalidaCuello();
+  openModal('modalSalida');
+}
+
+function renderVerSalidasInline(data){
+  var el=document.getElementById('tablaSalidasList');
+  if(!el) return;
+  if(!data.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-truck-fast"></i><p>Sin salidas registradas</p></div>'; return; }
+  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Orden</th><th>Modelo</th><th>Maquila</th><th>Suéteres</th><th>Acc.</th></tr></thead><tbody>'
+    +data.map(function(s){
+      return '<tr><td>'+fmt(s.fechaSalida||s.fecha)+'</td><td><strong>'+(s.noOrden||'—')+'</strong></td>'
+        +'<td>'+(s.nombreModelo||'—')+'</td><td>'+(s.nombreMaquila||'—')+'</td>'
+        +'<td><strong>'+(s.totalSueteres||0)+'</strong></td>'
+        +'<td><button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="if(confirm(\'¿Eliminar esta salida?\'))call(\'eliminarSalida\',(s||{}).id).then(function(){toast(\'Eliminada\',\'warning\');renderSalidas();})"><i class="fas fa-trash"></i></button></td>'
+      +'</tr>';
+    }).join('')
+    +'</tbody></table></div>';
 }
 
 function autoSalidaInfo(){
@@ -1426,7 +1278,7 @@ function guardarSalida(){
   var btn = document.querySelector('[onclick="guardarSalida()"]');
   if(btn){btn.disabled=true;btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block"></div> Guardando...';}
   call('registrarSalida',data).then(function(){
-    toast('Salida registrada ✓');
+    closeModal('modalSalida');toast('Salida registrada ✓');renderSalidas();;
     navigate('ver-salidas');
   }).catch(function(e){
     toast(e.message,'danger');
