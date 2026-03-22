@@ -1435,34 +1435,28 @@ function guardarSalida(){
 }
 
 
-function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Buscar por NoOrden</h1><p>Expediente completo: modelo, entradas, producci\u00f3n, embolsado, salidas</p></div></div> <div class=\"card\" style=\"max-width:500px;margin-bottom:20px\"> <div style=\"display:flex;gap:10px\"> <input class=\"form-control\" id=\"buscarNoOrden\" placeholder=\"Ingresa el NoOrden...\" value=\"${noOrdenInicial||''}\"> <button class=\"btn btn-primary\" onclick=\"ejecutarBusqueda()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div id=\"resultadoBusqueda\"></div>`; if(noOrdenInicial) ejecutarBusqueda(); } function ejecutarBusqueda(intentos){
-  intentos = intentos || 1;
-  var no = document.getElementById('buscarNoOrden').value.trim();
+function renderBuscar(noOrdenInicial){ document.getElementById('main').innerHTML=` <div class=\"page-header\"><div><h1>Buscar por NoOrden</h1><p>Expediente completo: modelo, entradas, producci\u00f3n, embolsado, salidas</p></div></div> <div class=\"card\" style=\"max-width:500px;margin-bottom:20px\"> <div style=\"display:flex;gap:10px\"> <input class=\"form-control\" id=\"buscarNoOrden\" placeholder=\"Ingresa el NoOrden...\" value=\"${noOrdenInicial||''}\"> <button class=\"btn btn-primary\" onclick=\"ejecutarBusqueda()\"><i class=\"fas fa-search\"></i> Buscar</button> </div> </div> <div id=\"resultadoBusqueda\"></div>`; if(noOrdenInicial) ejecutarBusqueda(); } function ejecutarBusqueda(){
+  var no = (document.getElementById('buscarNoOrden')||{value:''}).value.trim();
   if(!no){ toast('Ingresa un NoOrden','danger'); return; }
-  document.getElementById('resultadoBusqueda').innerHTML =
-    '<div class="loading"><div class="spinner"></div> Buscando expediente'+(intentos>1?' (reintentando...)':'...')+'</div>';
-  call('buscarNoOrden', no).then(function(r){
-    if(!r){
-      // Apps Script cold start — reintentar una vez automáticamente
-      if(intentos < 3){
-        setTimeout(function(){ ejecutarBusqueda(intentos+1); }, 1500);
-      } else {
-        document.getElementById('resultadoBusqueda').innerHTML =
-          '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>El servidor tardó en responder. Intenta de nuevo.</p></div>';
+  var el = document.getElementById('resultadoBusqueda');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
+  call('buscarNoOrden', no)
+    .then(function(r){
+      if(!r){
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:var(--warning)"></i><p>El servidor no respondió.<br><button class="btn btn-primary btn-sm" onclick="ejecutarBusqueda()" style="margin-top:8px">Reintentar</button></p></div>';
+        return;
       }
-      return;
-    }
-    if(!r.ok){
-      document.getElementById('resultadoBusqueda').innerHTML =
-        '<div class="empty-state"><i class="fas fa-search"></i><p>'+(r.msg||'No se encontró el NoOrden')+'</p></div>';
-      return;
-    }
-    renderExpediente(r, 'resultadoBusqueda');
-  }).catch(function(e){
-    document.getElementById('resultadoBusqueda').innerHTML =
-      '<div style="color:var(--danger);padding:20px">'+(e.message||'Error al buscar')+'</div>';
-  });
-} function abrirExpediente(noOrden){ document.getElementById('expTitle').textContent='Expediente NoOrden: '+noOrden; document.getElementById('expContent').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; openModal('modalExpediente'); call('buscarNoOrden',noOrden).then(r=>{ if(!r.ok){document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">'+r.msg+'</p>';return;} renderExpediente(r,'expContent'); }).catch(e=>{ document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">Error: '+(e.message||e)+'</p>'; }); } function renderExpediente(r, containerId){ const m=r.modelo; const totalEnt=r.entradas&&r.entradas.resumen?r.entradas.resumen.reduce((s,t)=>s+t.entradaFrente,0):0; const totalEmb=(r.embolsado&&Array.isArray(r.embolsado))?r.embolsado.reduce((s,e)=>s+(+e.cantidad||0),0):0; const totalProd=r.produccion?r.produccion.length:0; const totalSalidas=r.salidas?r.salidas.length:0; document.getElementById(containerId).innerHTML=` <div class=\"card\" style=\"margin-bottom:16px\"> <div style=\"display:flex;gap:16px;align-items:flex-start\"> ${m.foto?'<img src=\"'+m.foto+'\" style=\"width:88px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid var(--border)\" onerror=\"this.style.display=\\\'none\\\'\">':''} <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;flex:1\"> <div><div class=\"form-label\">NoOrden</div><strong style=\"font-size:18px;font-family:'Space Grotesk',sans-serif;color:var(--primary)\">${m.noOrden}</strong></div> <div><div class=\"form-label\">Modelo</div><strong>${m.modelo}</strong></div> <div><div class=\"form-label\">Cliente</div>${m.nombreCliente}</div> <div><div class=\"form-label\">Maquila</div>${m.nombreMaquila||'\u2014'}</div> <div><div class=\"form-label\">F.Entrega</div>${fmt(m.fechaEntrega)}</div> </div> </div> <div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:16px\"> ${m.tallas?m.tallas.map(t=>`<div class=\"talla-chip\"><div class=\"tc-talla\">${t.talla}</div><div class=\"tc-sub\">${t.cantidadSueter} su\u00e9ter</div><div class=\"tc-sub\" style=\"color:var(--text-light)\">F${t.frentes} E${t.espaldas} M${t.mangas}</div></div>`).join(''):''} </div> </div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px\"> <div class=\"stat-card\" style=\"--stat-color:var(--info);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-ramp-box\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEnt}</div><div class=\"stat-label\">Piezas Entrada</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--success);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-person-digging\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalProd}</div><div class=\"stat-label\">Reg. Producci\u00f3n</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--warning);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-box-open\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEmb}</div><div class=\"stat-label\">Embolsados</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--primary);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-fast\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalSalidas}</div><div class=\"stat-label\">Salidas</div></div></div> </div> ${r.entradas&&r.entradas.resumen&&r.entradas.resumen.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-ramp-box\"></i> Entradas por Talla</div> ${r.entradas.resumen.map(t=>{ const pctF=t.esperadoFrente>0?Math.min(100,Math.round(t.entradaFrente/t.esperadoFrente*100)):0; return `<div style=\"background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px\"> <div style=\"display:flex;justify-content:space-between;margin-bottom:8px\"><strong>Talla ${t.talla}</strong><span class=\"${t.faltaFrente===0?'badge badge-success':'badge badge-warning'}\">${t.faltaFrente===0?'Completa':'Pendiente'}</span></div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px\"> <div>Frentes: ${t.entradaFrente}/${t.esperadoFrente}<div class=\"progress\"><div class=\"progress-bar ${pctF>=100?'progress-ok':'progress-warn'}\" style=\"width:${pctF}%\"></div></div></div> <div>Espaldas: ${t.entradaEspalda}/${t.esperadoEspalda}</div> <div>Mangas: ${t.entradaManga}/${t.esperadoManga}</div> </div></div>`; }).join('')} </div>`:''  } ${r.produccion&&r.produccion.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-person-digging\"></i> Producci\u00f3n Registrada</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${r.produccion.map(p=>`<tr><td>${fmt(p.fecha)}</td><td>${p.trabajador}</td><td><span class=\"badge badge-info\">${p.proceso}</span></td><td>${(p.tallas||[]).map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"color:var(--text-muted)\">${p.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div> </div>`:''} ${r.embolsado&&r.embolsado.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-box-open\"></i> Embolsado</div> <div style=\"display:flex;flex-wrap:wrap;gap:8px\">${r.embolsado.map(e=>`<span class=\"badge badge-warning\" style=\"font-size:13px;padding:6px 12px\">${e.talla}: ${e.cantidad}</span>`).join('')}</div> </div>`:''} ${r.salidas&&r.salidas.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-fast\"></i> Salidas a Maquila</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Maquila</th><th>Tallas enviadas</th><th>Formato</th></tr></thead><tbody> ${r.salidas.map(s=>`<tr><td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td>${s.detalle?s.detalle.map(d=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${d.talla}:${d.total}</span>`).join(''):'\u2014'}</td><td><button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i></button></td></tr>`).join('')} </tbody></table></div> </div>`:''}`; } 
+      if(!r.ok){
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>'+(r.msg||'No se encontró el NoOrden')+'</p></div>';
+        return;
+      }
+      renderExpediente(r, 'resultadoBusqueda');
+    })
+    .catch(function(err){
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:var(--danger)"></i><p>'+(err&&err.message?err.message:'Error de conexión')+'<br><button class="btn btn-primary btn-sm" onclick="ejecutarBusqueda()" style="margin-top:8px">Reintentar</button></p></div>';
+    });
+}
+ function abrirExpediente(noOrden){ document.getElementById('expTitle').textContent='Expediente NoOrden: '+noOrden; document.getElementById('expContent').innerHTML='<div class=\"loading\"><div class=\"spinner\"></div></div>'; openModal('modalExpediente'); call('buscarNoOrden',noOrden).then(r=>{ if(!r.ok){document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">'+r.msg+'</p>';return;} renderExpediente(r,'expContent'); }).catch(e=>{ document.getElementById('expContent').innerHTML='<p style=\"color:var(--danger)\">Error: '+(e.message||e)+'</p>'; }); } function renderExpediente(r, containerId){ const m=r.modelo; const totalEnt=r.entradas&&r.entradas.resumen?r.entradas.resumen.reduce((s,t)=>s+t.entradaFrente,0):0; const totalEmb=(r.embolsado&&Array.isArray(r.embolsado))?r.embolsado.reduce((s,e)=>s+(+e.cantidad||0),0):0; const totalProd=r.produccion?r.produccion.length:0; const totalSalidas=r.salidas?r.salidas.length:0; document.getElementById(containerId).innerHTML=` <div class=\"card\" style=\"margin-bottom:16px\"> <div style=\"display:flex;gap:16px;align-items:flex-start\"> ${m.foto?'<img src=\"'+m.foto+'\" style=\"width:88px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid var(--border)\" onerror=\"this.style.display=\\\'none\\\'\">':''} <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;flex:1\"> <div><div class=\"form-label\">NoOrden</div><strong style=\"font-size:18px;font-family:'Space Grotesk',sans-serif;color:var(--primary)\">${m.noOrden}</strong></div> <div><div class=\"form-label\">Modelo</div><strong>${m.modelo}</strong></div> <div><div class=\"form-label\">Cliente</div>${m.nombreCliente}</div> <div><div class=\"form-label\">Maquila</div>${m.nombreMaquila||'\u2014'}</div> <div><div class=\"form-label\">F.Entrega</div>${fmt(m.fechaEntrega)}</div> </div> </div> <div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:16px\"> ${m.tallas?m.tallas.map(t=>`<div class=\"talla-chip\"><div class=\"tc-talla\">${t.talla}</div><div class=\"tc-sub\">${t.cantidadSueter} su\u00e9ter</div><div class=\"tc-sub\" style=\"color:var(--text-light)\">F${t.frentes} E${t.espaldas} M${t.mangas}</div></div>`).join(''):''} </div> </div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px\"> <div class=\"stat-card\" style=\"--stat-color:var(--info);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-ramp-box\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEnt}</div><div class=\"stat-label\">Piezas Entrada</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--success);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-person-digging\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalProd}</div><div class=\"stat-label\">Reg. Producci\u00f3n</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--warning);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-box-open\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalEmb}</div><div class=\"stat-label\">Embolsados</div></div></div> <div class=\"stat-card\" style=\"--stat-color:var(--primary);padding:14px\"><div class=\"stat-icon\" style=\"width:36px;height:36px;font-size:15px\"><i class=\"fas fa-truck-fast\"></i></div><div><div class=\"stat-value\" style=\"font-size:20px\">${totalSalidas}</div><div class=\"stat-label\">Salidas</div></div></div> </div> ${r.entradas&&r.entradas.resumen&&r.entradas.resumen.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-ramp-box\"></i> Entradas por Talla</div> ${r.entradas.resumen.map(t=>{ const pctF=t.esperadoFrente>0?Math.min(100,Math.round(t.entradaFrente/t.esperadoFrente*100)):0; return `<div style=\"background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px\"> <div style=\"display:flex;justify-content:space-between;margin-bottom:8px\"><strong>Talla ${t.talla}</strong><span class=\"${t.faltaFrente===0?'badge badge-success':'badge badge-warning'}\">${t.faltaFrente===0?'Completa':'Pendiente'}</span></div> <div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px\"> <div>Frentes: ${t.entradaFrente}/${t.esperadoFrente}<div class=\"progress\"><div class=\"progress-bar ${pctF>=100?'progress-ok':'progress-warn'}\" style=\"width:${pctF}%\"></div></div></div> <div>Espaldas: ${t.entradaEspalda}/${t.esperadoEspalda}</div> <div>Mangas: ${t.entradaManga}/${t.esperadoManga}</div> </div></div>`; }).join('')} </div>`:''  } ${r.produccion&&r.produccion.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-person-digging\"></i> Producci\u00f3n Registrada</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Proceso</th><th>Tallas</th><th>Obs.</th></tr></thead><tbody> ${r.produccion.map(p=>`<tr><td>${fmt(p.fecha)}</td><td>${p.trabajador}</td><td><span class=\"badge badge-info\">${p.proceso}</span></td><td>${(p.tallas||[]).map(t=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${t.talla}:F${t.frentes}E${t.espaldas}M${t.mangas}</span>`).join('')}</td><td style=\"color:var(--text-muted)\">${p.observaciones||'\u2014'}</td></tr>`).join('')} </tbody></table></div> </div>`:''} ${r.embolsado&&r.embolsado.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-box-open\"></i> Embolsado</div> <div style=\"display:flex;flex-wrap:wrap;gap:8px\">${r.embolsado.map(e=>`<span class=\"badge badge-warning\" style=\"font-size:13px;padding:6px 12px\">${e.talla}: ${e.cantidad}</span>`).join('')}</div> </div>`:''} ${r.salidas&&r.salidas.length?` <div class=\"exp-section\"> <div class=\"exp-section-title\"><i class=\"fas fa-truck-fast\"></i> Salidas a Maquila</div> <div class=\"table-wrap\"><table class=\"table\" style=\"font-size:12px\"><thead><tr><th>Fecha</th><th>Maquila</th><th>Tallas enviadas</th><th>Formato</th></tr></thead><tbody> ${r.salidas.map(s=>`<tr><td>${fmt(s.fecha)}</td><td>${s.nombreMaquila}</td><td>${s.detalle?s.detalle.map(d=>`<span class=\"badge badge-gray\" style=\"margin:1px\">${d.talla}:${d.total}</span>`).join(''):'\u2014'}</td><td><button class=\"btn btn-primary btn-sm\" onclick=\"verFormato('${s.id}')\"><i class=\"fas fa-print\"></i></button></td></tr>`).join('')} </tbody></table></div> </div>`:''}`; } 
 // ══════════════════════════════════════════════════════════════
 // MÓDULO REPOSICIONES
 // ══════════════════════════════════════════════════════════════
@@ -1765,74 +1759,98 @@ function dashCargarMaquilas(pm){
 
 
 function _repoFiltrarPeriodo(data){
-  var anio = window._dashAnio || new Date().getFullYear();
-  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? window._dashMes : '';
+  var anio = parseInt(window._dashAnio || new Date().getFullYear());
+  var mes  = (window._dashMes !== undefined && window._dashMes !== '') ? parseInt(window._dashMes) : '';
   return (data||[]).filter(function(r){
-    // Parsear fecha tolerante — acepta Date object, string yyyy-mm-dd, o timestamp
     var raw = r.fecha;
-    var f;
     if(!raw) return false;
-    if(raw instanceof Date){ f = raw; }
-    else {
-      // Forzar formato ISO para que Date() lo parsee bien
-      var str = String(raw).trim();
-      // Si viene como "2026-03-10 14:30:00" o "2026-03-10"
-      str = str.replace(' ','T');
+    var f;
+    if(typeof raw === 'number') {
+      f = new Date(raw);
+    } else {
+      var str = String(raw).trim().replace(' ','T');
+      if(str.indexOf('T') === -1) str += 'T00:00:00';
       f = new Date(str);
     }
     if(isNaN(f.getTime())) return false;
-    if(mes !== '') return f.getFullYear()===parseInt(anio) && f.getMonth()===parseInt(mes);
-    return f.getFullYear()===parseInt(anio);
+    if(mes !== '') return f.getFullYear()===anio && f.getMonth()===mes;
+    return f.getFullYear()===anio;
   });
+}
+
+function _dashBarras(elId, por, color, sufijo){
+  var el = document.getElementById(elId);
+  if(!el) return;
+  var lista = Object.keys(por).map(function(k){
+    return {nombre:k, total:por[k]};
+  }).sort(function(a,b){ return b.total-a.total; }).slice(0,6);
+  if(!lista.length){
+    el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:13px;text-align:center">Sin registros en este período</div>';
+    return;
+  }
+  var maxV = lista[0].total || 1;
+  el.innerHTML = lista.map(function(item){
+    var pct = Math.round(item.total/maxV*100);
+    return '<div style="margin-bottom:14px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+        +'<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">'+item.nombre+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:'+color+';flex-shrink:0">'+item.total+' '+sufijo+'</span>'
+      +'</div>'
+      +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:6px;transition:width .5s"></div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+function _procesarReposicionesParaDash(data, tipoFiltro, campoAgrupar, elId, color, sufijo){
+  var el = document.getElementById(elId);
+  if(!el) return;
+  var fil = _repoFiltrarPeriodo(data).filter(function(r){
+    return String(r.tipo||'').toLowerCase().indexOf(tipoFiltro) !== -1;
+  });
+  var por = {};
+  fil.forEach(function(r){
+    var key = (r[campoAgrupar]||'').trim() || 'Sin '+campoAgrupar;
+    if(campoAgrupar==='maquina') key = key ? 'Máq. '+key : 'Sin máquina';
+    por[key] = (por[key]||0) + (Number(r.cantidad)||1);
+  });
+  _dashBarras(elId, por, color, sufijo);
 }
 
 function dashCargarTejFaltantes(){
   var el = document.getElementById('dashTejFaltChart');
   if(!el) return;
-  var data = window._dashReposCache || [];
-  var fil = _repoFiltrarPeriodo(data).filter(function(r){
-    return String(r.tipo||'').toLowerCase().indexOf('faltante') !== -1;
+  call('getReposiciones').then(function(data){
+    _procesarReposicionesParaDash(data||[], 'faltante', 'tejedor', 'dashTejFaltChart', '#f59e0b', 'falt.');
+  }).catch(function(err){
+    var el = document.getElementById('dashTejFaltChart');
+    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:12px">'+((err&&err.message)||'Error')+'</div>';
   });
-  var por = {};
-  fil.forEach(function(r){
-    var t = (r.tejedor||'').trim() || 'Sin nombre';
-    por[t] = (por[t]||0) + (Number(r.cantidad)||1);
-  });
-  _dashBarras('dashTejFaltChart', por, '#f59e0b', 'falt.');
 }
-
 
 function dashCargarTejDefectos(){
   var el = document.getElementById('dashTejDefChart');
   if(!el) return;
-  var data = window._dashReposCache || [];
-  var fil = _repoFiltrarPeriodo(data).filter(function(r){
-    return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
+  call('getReposiciones').then(function(data){
+    _procesarReposicionesParaDash(data||[], 'defecto', 'tejedor', 'dashTejDefChart', '#ef4444', 'def.');
+  }).catch(function(err){
+    var el = document.getElementById('dashTejDefChart');
+    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:12px">'+((err&&err.message)||'Error')+'</div>';
   });
-  var por = {};
-  fil.forEach(function(r){
-    var t = (r.tejedor||'').trim() || 'Sin nombre';
-    por[t] = (por[t]||0) + (Number(r.cantidad)||1);
-  });
-  _dashBarras('dashTejDefChart', por, '#ef4444', 'def.');
 }
-
 
 function dashCargarMaqDefectos(){
   var el = document.getElementById('dashMaqDefChart');
   if(!el) return;
-  var data = window._dashReposCache || [];
-  var fil = _repoFiltrarPeriodo(data).filter(function(r){
-    return String(r.tipo||'').toLowerCase().indexOf('defecto') !== -1;
+  call('getReposiciones').then(function(data){
+    _procesarReposicionesParaDash(data||[], 'defecto', 'maquina', 'dashMaqDefChart', '#ef4444', 'def.');
+  }).catch(function(err){
+    var el = document.getElementById('dashMaqDefChart');
+    if(el) el.innerHTML='<div style="color:var(--text-muted);padding:12px;font-size:12px">'+((err&&err.message)||'Error')+'</div>';
   });
-  var por = {};
-  fil.forEach(function(r){
-    var m = (r.maquina||'').trim();
-    var key = m ? 'Máq. '+m : 'Sin máquina';
-    por[key] = (por[key]||0) + (Number(r.cantidad)||1);
-  });
-  _dashBarras('dashMaqDefChart', por, '#ef4444', 'def.');
 }
+
 
 function dashCargarReposiciones(periodo){
   var anio = window._dashAnio || new Date().getFullYear();
