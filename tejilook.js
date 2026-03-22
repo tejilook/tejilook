@@ -2275,10 +2275,12 @@ function guardarUsuario(){
   var usr = (document.getElementById('usrUsuario')||{value:''}).value.trim();
   var pw  = (document.getElementById('usrPassword')||{value:''}).value.trim();
   var rol = (document.getElementById('usrRol')||{value:'Administrador'}).value;
+  var esNuevo = !id;
   if(!usr){ toast('El nombre de usuario es requerido','danger'); return; }
-  if(!id && !pw){ toast('La contraseña es requerida para nuevos usuarios','danger'); return; }
-  if(!id && pw && pw.length < 4){ toast('La contraseña debe tener al menos 4 caracteres','danger'); return; }
-  // Si editando y pw vacía, enviar vacío — el backend conserva la actual
+  // Solo validar contraseña al crear usuario nuevo
+  if(esNuevo && !pw){ toast('La contraseña es requerida','danger'); return; }
+  if(esNuevo && pw.length < 4){ toast('Mínimo 4 caracteres','danger'); return; }
+  // Al editar con contraseña vacía → backend conserva la actual
   var data = { id:id, nombre:nom||usr, usuario:usr, password:pw, rol:rol, activo:'SI' };
   var fn = id ? 'editarUsuario' : 'crearUsuario';
   call(fn, data).then(function(r){
