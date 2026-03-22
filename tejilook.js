@@ -1406,7 +1406,7 @@ function renderReposiciones(){
     document.getElementById('main').innerHTML =
       '<div class="page-header">'
         +'<div><h1>Reposiciones</h1><p>Faltantes y defectos de producción</p></div>'
-        +'<button class="btn btn-primary" onclick="_repoShowForm()"><i class="fas fa-plus"></i> Nueva Reposición</button>'
+        +'<button class="btn btn-primary rep-action" onclick="_repoShowForm()"><i class="fas fa-plus"></i> Nueva Reposición</button>'
       +'</div>'
       +'<div id="repoFormWrap" style="display:none"></div>'
       +'<div class="card" style="margin-top:16px">'
@@ -1472,7 +1472,7 @@ function _repoRenderTabla(data){
   var rows = data.map(function(r){
     var nextEst = r.estatus==='Se pidió' ? 'En proceso' : r.estatus==='En proceso' ? 'Entregada' : null;
     var btnAvanzar = nextEst
-      ? '<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="_repoAvanzar(\''+r.id+'\',\''+nextEst+'\')">'
+      ? '<button class="btn btn-ghost btn-sm rep-action" style="font-size:11px" onclick="_repoAvanzar(\''+r.id+'\',\''+nextEst+'\')">'
           +'<i class="fas fa-arrow-right"></i> '+nextEst
         +'</button>'
       : '';
@@ -2236,6 +2236,7 @@ function renderUsuarios(){
           +'<div class="form-group"><label class="form-label">Rol</label>'
             +'<select class="form-control form-select" id="usrRol">'
               +'<option value="Administrador">Administrador</option>'
+              +'<option value="Supervisor">Supervisor</option>'
               +'<option value="Superusuario">Superusuario</option>'
             +'</select></div>'
           +'<button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">'
@@ -2470,12 +2471,11 @@ function _cargarSistema(user){
   document.querySelectorAll('.nav-sistema').forEach(function(el){
     el.style.display = isSu ? '' : 'none';
   });
-  // Supervisor: solo ve sección Calidad, el resto oculto
+  // Supervisor: ve todo igual que Admin + marca body para solo-lectura excepto reposiciones
   if(isSupervisor){
-    document.querySelectorAll('.nav-section').forEach(function(s){
-      if(!s.classList.contains('nav-calidad')) s.style.display='none';
-    });
-    setTimeout(function(){ navigate('reposiciones'); }, 100);
+    document.body.setAttribute('data-rol','supervisor');
+  } else {
+    document.body.removeAttribute('data-rol');
   }
   call('getConfig').then(function(cfg){
     window._sysConfig = cfg;
