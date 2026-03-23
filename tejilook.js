@@ -2836,11 +2836,20 @@ function _cargarSistema(user){
   document.querySelectorAll('.nav-sistema').forEach(function(el){
     el.style.display = isSu ? '' : 'none';
   });
-  // Supervisor: ve todo igual que Admin + marca body para solo-lectura excepto reposiciones
+  // Supervisor: SOLO ve Reposiciones
   if(isSupervisor){
     document.body.setAttribute('data-rol','supervisor');
+    // Ocultar todo excepto sección Calidad
+    document.querySelectorAll('.nav-section').forEach(function(s){
+      if(!s.classList.contains('nav-calidad')) s.style.display='none';
+    });
+    setTimeout(function(){ navigate('reposiciones'); }, 100);
   } else {
     document.body.removeAttribute('data-rol');
+    // Asegurar que todas las secciones del nav sean visibles
+    document.querySelectorAll('.nav-section').forEach(function(s){
+      s.style.display='';
+    });
   }
   call('getConfig').then(function(cfg){
     window._sysConfig = cfg;
@@ -3223,5 +3232,3 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
-
-
