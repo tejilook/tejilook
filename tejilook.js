@@ -1506,6 +1506,7 @@ function _repoRenderTabla(data){
           +'<i class="fas fa-arrow-right"></i> '+nextEst
         +'</button>'
       : '';
+    var btnEv = '<button class="btn btn-info btn-sm btn-icon rep-action" title="Ver/Agregar evidencias" onclick="_abrirEvidencias(\''+r.id+'\',\''+r.noOrden+' - '+r.tipo+'\')"><i class="fas fa-camera"></i></button>';
     return '<tr>'
       +'<td>'+fmt(r.fecha)+'</td>'
       +'<td><strong>'+r.noOrden+'</strong>'+(r.nombreModelo?'<br><span style="font-size:11px;color:var(--text-muted)">'+r.nombreModelo+'</span>':'')+'</td>'
@@ -1515,8 +1516,9 @@ function _repoRenderTabla(data){
       +'<td>'+(_TIPO_BADGE[r.tipo]||r.tipo)+'</td>'
       +'<td>'+(r.observacion||'—')+'</td>'
       +'<td>'+(_ESTATUS_BADGE[r.estatus]||r.estatus)+'</td>'
-      +'<td style="white-space:nowrap">'
-        +btnAvanzar+' '
+      +'<td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap">'
+        +btnAvanzar
+        +btnEv
         +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="_repoEliminar(\''+r.id+'\')"><i class="fas fa-trash"></i></button>'
       +'</td>'
     +'</tr>';
@@ -1971,6 +1973,117 @@ function _imprimirResumenEntradas(){
     +'</body></html>');
   w.document.close();
   setTimeout(function(){ w.print(); }, 400);
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// EVIDENCIAS DE REPOSICIONES
+// ══════════════════════════════════════════════════════════════
+
+var _evRepoId = '';
+var _evFotosSeleccionadas = [];
+
+function _abrirEvidencias(idRepo, titulo){
+  _evRepoId = idRepo;
+  _evFotosSeleccionadas = [];
+  var t = document.getElementById('modalEvTitle');
+  if(t) t.textContent = 'Evidencias — ' + titulo;
+  var inp = document.getElementById('evFotoInput');
+  if(inp) inp.value = '';
+  var desc = document.getElementById('evDesc');
+  if(desc) desc.value = '';
+  var prev = document.getElementById('evPreviewWrap');
+  if(prev) prev.innerHTML = '';
+  openModal('modalEvidencias');
+  _cargarEvidencias();
+}
+
+function _cargarEvidencias(){
+  var el = document.getElementById('evListaWrap');
+  if(!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  call('getEvidenciasByReposicion', _evRepoId).then(function(evs){
+    if(!evs || !evs.length){
+      el.innerHTML = '<div class="empty-state" style="padding:24px"><i class="fas fa-camera" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px"></i><p>Sin evidencias aún</p></div>';
+      return;
+    }
+    el.innerHTML = '<div style="font-weight:600;font-size:13px;margin-bottom:10px">Evidencias registradas ('+evs.length+')</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'
+      +evs.map(function(ev){
+        return '<div style="position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+          +(ev.fotoUrl
+            ? '<img src="'+ev.fotoUrl+'" style="width:100%;height:130px;object-fit:cover;display:block;cursor:pointer" onclick="window.open(\''+ev.fotoUrl+'\',\'_blank\')">'
+            : '<div style="width:100%;height:130px;background:var(--surface2);display:flex;align-items:center;justify-content:center"><i class="fas fa-image" style="font-size:32px;color:var(--text-light)"></i></div>'
+          )
+          +'<div style="padding:8px">'
+            +'<div style="font-size:11px;color:var(--text-muted)">'+(ev.fecha||'').slice(0,10)+'</div>'
+            +(ev.descripcion ? '<div style="font-size:12px;margin-top:2px">'+ev.descripcion+'</div>' : '')
+          +'</div>'
+          +'<button onclick="_eliminarEvidencia(\''+ev.id+'\')" style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,.85);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>'
+        +'</div>';
+      }).join('')
+      +'</div>';
+  }).catch(function(){
+    el.innerHTML = '<div style="color:var(--danger);padding:12px">Error al cargar evidencias</div>';
+  });
+}
+
+function _evPreviewFotos(input){
+  _evFotosSeleccionadas = Array.from(input.files);
+  var wrap = document.getElementById('evPreviewWrap');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  _evFotosSeleccionadas.forEach(function(file, i){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var div = document.createElement('div');
+      div.style.cssText = 'position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border)';
+      div.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">'
+        +'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 4px;text-align:center">'+i+'</div>';
+      wrap.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function _evSubir(){
+  if(!_evRepoId){ toast('Sin reposición seleccionada','danger'); return; }
+  if(!_evFotosSeleccionadas.length){ toast('Selecciona al menos una foto','danger'); return; }
+  var desc = (document.getElementById('evDesc')||{value:''}).value.trim();
+  var btn = document.querySelector('[onclick="_evSubir()"]');
+  if(btn){ btn.disabled=true; btn.innerHTML='<div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Subiendo...'; }
+
+  // Comprimir y subir una a una
+  var promises = _evFotosSeleccionadas.map(function(file){
+    return fileToBase64(file, 1200, 0.80).then(function(b64){
+      return call('agregarEvidencia', {
+        idReposicion: _evRepoId,
+        fotoBase64:   b64,
+        descripcion:  desc
+      });
+    });
+  });
+
+  Promise.all(promises).then(function(){
+    toast('Evidencia(s) subida(s) ✓');
+    _evFotosSeleccionadas = [];
+    var inp = document.getElementById('evFotoInput'); if(inp) inp.value='';
+    var prev = document.getElementById('evPreviewWrap'); if(prev) prev.innerHTML='';
+    var descEl = document.getElementById('evDesc'); if(descEl) descEl.value='';
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-upload"></i> Subir evidencia(s)'; }
+    _cargarEvidencias();
+  }).catch(function(e){
+    toast('Error: '+(e.message||e),'danger');
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-upload"></i> Subir evidencia(s)'; }
+  });
+}
+
+function _eliminarEvidencia(id){
+  if(!confirm('¿Eliminar esta evidencia?')) return;
+  call('eliminarEvidencia', id).then(function(){
+    toast('Evidencia eliminada','warning');
+    _cargarEvidencias();
+  });
 }
 
 function renderVerEntradas(){
