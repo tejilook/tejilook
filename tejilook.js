@@ -1519,6 +1519,7 @@ function _repoRenderTabla(data){
       +'<td style="white-space:nowrap;display:flex;gap:4px;flex-wrap:wrap">'
         +btnAvanzar
         +btnEv
+        +'<button class="btn btn-ghost btn-sm btn-icon" title="Ver detalle" onclick="_repoVerDetalle(\''+r.id+'\')" ><i class="fas fa-eye"></i></button>'
         +'<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="_repoEliminar(\''+r.id+'\')"><i class="fas fa-trash"></i></button>'
       +'</td>'
     +'</tr>';
@@ -1532,6 +1533,56 @@ function _repoRenderTabla(data){
     +'</tr></thead>'
     +'<tbody>'+rows+'</tbody>'
     +'</table></div>';
+}
+
+
+function _repoVerDetalle(id){
+  var r = (_reposAll||[]).find(function(x){ return x.id===id; });
+  if(!r){ toast('Reposición no encontrada','danger'); return; }
+  document.getElementById('expTitle').textContent = 'Reposición — Orden '+r.noOrden;
+  var html =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'
+      +'<div><div class="form-label">Fecha</div><strong>'+fmt(r.fecha)+'</strong></div>'
+      +'<div><div class="form-label">No. Orden</div><strong>'+r.noOrden+'</strong></div>'
+      +'<div><div class="form-label">Modelo</div>'+(r.nombreModelo||'—')+'</div>'
+      +'<div><div class="form-label">Tejedor</div>'+(r.tejedor||'—')+'</div>'
+      +'<div><div class="form-label">Máquina</div>'+(r.maquina||'—')+'</div>'
+      +'<div><div class="form-label">Talla / Prenda</div>'+r.talla+' — '+r.prenda+'</div>'
+      +'<div><div class="form-label">Cantidad</div><strong>'+r.cantidad+'</strong></div>'
+      +'<div><div class="form-label">Tipo</div>'+(_TIPO_BADGE[r.tipo]||r.tipo)+'</div>'
+      +'<div><div class="form-label">Estatus</div>'+(_ESTATUS_BADGE[r.estatus]||r.estatus)+'</div>'
+      +'<div><div class="form-label">Revisó</div>'+(r.reviso||'—')+'</div>'
+    +'</div>'
+    +(r.observacion ? '<div class="form-label">Observación</div><p style="font-size:13px;margin-bottom:16px">'+r.observacion+'</p>' : '')
+    +'<div style="font-weight:600;font-size:13px;margin-bottom:8px"><i class="fas fa-camera" style="color:var(--info)"></i> Evidencias</div>'
+    +'<div id="detalleEvWrap"><div class="loading"><div class="spinner"></div></div></div>';
+
+  document.getElementById('expContent').innerHTML = html;
+  openModal('modalExpediente');
+
+  // Cargar evidencias
+  call('getEvidenciasByReposicion', id).then(function(evs){
+    var el = document.getElementById('detalleEvWrap');
+    if(!el) return;
+    if(!evs || !evs.length){
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px">Sin evidencias registradas</div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">'
+      +evs.map(function(ev){
+        return '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">'
+          +(ev.fotoUrl
+            ? '<img src="'+ev.fotoUrl+'" style="width:100%;height:110px;object-fit:cover;display:block;cursor:pointer" onclick="window.open(\''+ev.fotoUrl+'\',\'_blank\')">'
+            : '<div style="height:110px;background:var(--surface2);display:flex;align-items:center;justify-content:center"><i class="fas fa-image" style="color:var(--text-light);font-size:28px"></i></div>'
+          )
+          +(ev.descripcion ? '<div style="padding:6px;font-size:11px;color:var(--text-muted)">'+ev.descripcion+'</div>' : '')
+        +'</div>';
+      }).join('')
+    +'</div>'
+    +'<div style="margin-top:12px">'
+      +'<button class="btn btn-info btn-sm rep-action" onclick="_abrirEvidencias(\''+id+'\',\'Orden '+r.noOrden+'\')"><i class="fas fa-camera"></i> Agregar más evidencias</button>'
+    +'</div>';
+  });
 }
 
 function _repoAvanzar(id, nuevoEst){
@@ -1592,6 +1643,11 @@ function _repoShowForm(){
       +'</div>'
       +'<div class="form-group" style="margin-top:14px"><label class="form-label">Observaci\u00f3n general</label>'
         +'<textarea class="form-control" id="repObs" rows="2" placeholder="Detalles adicionales..."></textarea></div>'
+      +'<div class="form-group" style="margin-top:10px">'
+        +'<label class="form-label"><i class="fas fa-camera" style="color:var(--info)"></i> Fotos de evidencia (opcional)</label>'
+        +'<input type="file" id="repFotos" accept="image/*" multiple style="display:block;width:100%;font-size:13px;margin-top:4px" onchange="_repoPrevFotos(this)">'
+        +'<div id="repFotosPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>'
+      +'</div>'
       +'<div style="display:flex;gap:8px;margin-top:8px">'
         +'<button class="btn btn-primary" onclick="_repoGuardar()"><i class="fas fa-save"></i> Guardar Reposici\u00f3n</button>'
         +'<button class="btn btn-ghost" onclick="document.getElementById(\'repoFormWrap\').style.display=\'none\'">Cancelar</button>'
@@ -1615,6 +1671,23 @@ function _repoAutoModelo(noOrden){
     var el = document.getElementById('repModelo');
     if(el && m.length) el.value = m[0].modelo || '';
   }).catch(function(){});
+}
+
+
+function _repoPrevFotos(input){
+  var wrap = document.getElementById('repFotosPreview');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  Array.from(input.files).forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
+      wrap.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function _repoRenderPrendas(){
@@ -1683,7 +1756,27 @@ function _repoGuardar(){
       reviso:   p.reviso
     }));
   });
-  Promise.all(promises).then(function(){
+  Promise.all(promises).then(function(results){
+    var n = prendas.length;
+    // Subir fotos de evidencia si hay
+    var fotoInput = document.getElementById('repFotos');
+    var fotos = fotoInput ? Array.from(fotoInput.files) : [];
+    if(fotos.length && results.length){
+      // Subir fotos para cada reposición creada
+      var evPromises = [];
+      results.forEach(function(r){
+        if(!r || !r.id) return;
+        fotos.forEach(function(foto){
+          evPromises.push(
+            fileToBase64(foto, 1200, 0.80).then(function(b64){
+              return call('agregarEvidencia',{ idReposicion:r.id, fotoBase64:b64, descripcion:'Evidencia al registrar' });
+            })
+          );
+        });
+      });
+      return Promise.all(evPromises);
+    }
+  }).then(function(){
     var n = prendas.length;
     toast('Reposici\u00f3n guardada \u2705 (' + n + ' ' + (n===1?'prenda':'prendas') + ')');
     document.getElementById('repoFormWrap').style.display = 'none';
@@ -3130,3 +3223,5 @@ function printFormato(){
   w.document.close();
   setTimeout(function(){w.print();},600);
 }
+
+
