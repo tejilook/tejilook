@@ -606,8 +606,7 @@ window.scrollTo(0,0);
 function editarTrabForm(t){ document.getElementById('trabId').value=t.id; document.getElementById('trabNombre').value=t.nombre; document.getElementById('trabPuesto').value=t.puesto||'Revisión'; document.getElementById('trabFotoUrl').value=t.foto||''; document.getElementById('trabActivo').value=t.activo; if(t.foto){const img=document.getElementById('trabFotoPreview');img.src=t.foto;img.style.display='block';} document.getElementById('formTrabTitle').textContent='Editar Trabajador'; window.scrollTo(0,0); }
 let _modeloTallas=[{talla:'',cantidad:0}];
 
-async 
-function guardarEntrada(){
+async function guardarEntrada(){
 const noOrden=document.getElementById('entNoOrden').value.trim();
 if(!noOrden){toast('NoOrden requerido','danger');return;}
 const sel=document.getElementById('entTrab');
