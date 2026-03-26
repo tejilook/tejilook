@@ -606,31 +606,7 @@ window.scrollTo(0,0);
 function editarTrabForm(t){ document.getElementById('trabId').value=t.id; document.getElementById('trabNombre').value=t.nombre; document.getElementById('trabPuesto').value=t.puesto||'Revisión'; document.getElementById('trabFotoUrl').value=t.foto||''; document.getElementById('trabActivo').value=t.activo; if(t.foto){const img=document.getElementById('trabFotoPreview');img.src=t.foto;img.style.display='block';} document.getElementById('formTrabTitle').textContent='Editar Trabajador'; window.scrollTo(0,0); }
 let _modeloTallas=[{talla:'',cantidad:0}];
 
-async function guardarCliente(){
-const id=document.getElementById('clienteId').value;
-const nombre=document.getElementById('clienteNombre').value.trim();
-if(!nombre){toast('El nombre es requerido','danger');return;}
-const fileInput=document.getElementById('logoFile');
-let logoBase64='';
-if(fileInput.files[0]){
-logoBase64=await fileToBase64(fileInput.files[0]);
-
-}
-const data={id, cliente:nombre, logoBase64, logoUrl:document.getElementById('clienteLogoUrl').value, activo:document.getElementById('clienteActivo').value};
-const fn=id?'editarCliente':'crearCliente';
-const btn=document.querySelector('[onclick="guardarCliente()"]');
-btn.innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Guardando...';
-btn.disabled=true;
-call(fn,data).then(()=>{
-closeModal('modalCliente');toast(id?'Cliente actualizado':'Cliente creado ✓');
-limpiarFormCliente(); cargarTablaClientes();
-}).catch(e=>toast('Error: '+e.message,'danger'))
-.finally(()=>{btn.innerHTML='<i class="fas fa-save"></i> Guardar';btn.disabled=false;});
-
-  var t=document.getElementById('modalTrabTitle');if(t)t.textContent='Editar Trabajador';
-  openModal('modalTrabajador');
-}
-
+async 
 function guardarEntrada(){
 const noOrden=document.getElementById('entNoOrden').value.trim();
 if(!noOrden){toast('NoOrden requerido','danger');return;}
@@ -807,7 +783,7 @@ if(!data.length){document.getElementById('tablaClientes').innerHTML='<div class=
 document.getElementById('tablaClientes').innerHTML=`<div class="table-wrap"><table class="table">
 <thead><tr><th>Logo</th><th>Nombre</th><th>Estado</th><th>Acc.</th></tr></thead><tbody>
 ${data.map(c=>`<tr>
-<td>${c.logo?'<img src="'+c.logo+'" style="height:36px;border-radius:6px;object-fit:contain">':'<i class="fas fa-building" style="color:var(--text-light)"></i>'}</td>
+<td>${c.logo?'<img src="'+(c.logo.indexOf('thumbnail?id=')>-1?'https://lh3.googleusercontent.com/d/'+c.logo.replace(/.*[?&]id=([^&]+).*/,'$1'):c.logo)+'" style="height:36px;border-radius:6px;object-fit:contain;border:1px solid var(--border)">':'<i class="fas fa-building" style="color:var(--text-light)"></i>'}</td>
 <td><strong>${c.cliente}</strong></td><td>${badge(c.activo)}</td>
 <td>
 <button class="btn btn-ghost btn-sm btn-icon" onclick='editarClienteForm(${JSON.stringify(c).replace(/'/g,"\\'")})'><i class="fas fa-pencil"></i></button>
@@ -2399,136 +2375,7 @@ function eliminarSalida(id, btn){
   });
 }
 
- function verFormato(idSalida){
-  document.getElementById('formatoContent').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  openModal('modalFormato');
-  call('getFormatoSalida', idSalida).then(function(f){
-    if(!f){document.getElementById('formatoContent').innerHTML='<p style="color:red">Error al cargar el formato.</p>';return;}
-
-    var salida  = f.salida;
-    var lineas  = f.detalle || [];   // [{talla, bultos, pzBolsa, total, cuello}]
-
-    // Pad hasta 10 columnas para que la tabla siempre tenga espacio
-    var cols = lineas.slice();
-    while(cols.length < 10) cols.push({talla:'',bultos:'',pzBolsa:'',total:'',cuello:''});
-
-    var totalPz = lineas.reduce(function(s,l){return s+(Number(l.total)||0);},0);
-
-    var cfg     = window._sysConfig || {};
-    var logoHtml = cfg.sistLogoUrl
-      ? '<img src="'+cfg.sistLogoUrl+'" style="height:54px;object-fit:contain">'
-      : '<div style="font-family:Arial,sans-serif;font-size:26px;font-weight:900;line-height:1">TEJI<span style="font-weight:400">-LOOK</span></div>';
-
-    var B  = 'border:1.5px solid #000;';
-    var BG = 'border:1.5px solid #000;background:#e5e7eb;print-color-adjust:exact;-webkit-print-color-adjust:exact;';
-    var cellBase   = B+'padding:6px 4px;text-align:center;font-size:11px;';
-    var cellLabel  = BG+'padding:6px 8px;font-weight:700;font-size:11px;white-space:nowrap;min-width:90px;';
-    var cellHeader = BG+'padding:6px 4px;text-align:center;font-weight:700;font-size:11px;min-width:44px;';
-
-    function v(val){ return (val!==''&&val!==undefined&&val!==null)?val:''; }
-
-    document.getElementById('formatoContent').innerHTML =
-      '<div id="printArea" style="font-family:Arial,sans-serif;background:#fff;color:#000;padding:20px;max-width:900px;margin:0 auto">'
-
-        // ── ENCABEZADO ──
-        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:14px">'
-          +'<div>'+logoHtml+'</div>'
-          +'<div style="text-align:right">'
-            +'<div style="font-size:20px;font-weight:900;text-transform:uppercase;line-height:1.2">CONTROL SALIDAS<br>ÁREA DE TEJIDO</div>'
-          +'</div>'
-        +'</div>'
-
-        // ── META ──
-        +'<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">'
-          +'<tr>'
-            +'<td style="padding:3px 0;width:50%"><strong>FECHA:</strong>&nbsp;'+fmt(salida.fecha)+'</td>'
-            +'<td style="padding:3px 0"><strong>CLIENTE:</strong>&nbsp;'+v(salida.cliente)+'</td>'
-          +'</tr>'
-          +'<tr>'
-            +'<td style="padding:3px 0"><strong>MODELO:</strong>&nbsp;'+v(salida.modelo)+'</td>'
-            +'<td style="padding:3px 0"><strong>MAQUILA:</strong>&nbsp;'+v(salida.maquila)+'</td>'
-          +'</tr>'
-          +'<tr>'
-            +'<td style="padding:3px 0"><strong>NO. ORDEN:</strong>&nbsp;<span style="font-weight:700;color:#1e40af">'+v(salida.noOrden)+'</span></td>'
-            +'<td style="padding:3px 0"><strong>FECHA DE ENTREGA:</strong>&nbsp;'+fmt(salida.caducidad)+'</td>'
-          +'</tr>'
-          +'<tr>'
-            +'<td colspan="2" style="padding:4px 0"><strong>TOTAL DE PZ:</strong>&nbsp;<span style="font-weight:700;font-size:15px">'+totalPz+'</span></td>'
-          +'</tr>'
-        +'</table>'
-
-        // ── TABLA BULTOS ──
-        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'
-          +'<thead><tr>'
-            +'<th style="'+cellLabel+'">TALLA</th>'
-            +cols.map(function(c){return '<th style="'+cellHeader+'">'+v(c.talla)+'</th>';}).join('')
-          +'</tr></thead>'
-          +'<tbody>'
-            +'<tr><td style="'+cellLabel+'">BULTOS</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.bultos)+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellLabel+'">PZ POR<br>BULTO</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.pzBolsa)+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellLabel+'">TOTAL<br>DE PZ</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+';font-weight:700">'+v(c.total)+'</td>';}).join('')+'</tr>'
-          +'</tbody>'
-        +'</table>'
-
-        // ── TABLA CANTIDAD DE PIEZAS ──
-        +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'
-          +'<thead>'
-            +'<tr><th colspan="'+(cols.length+1)+'" style="'+BG+'padding:8px;text-align:center;font-size:13px;letter-spacing:1px">CANTIDAD DE PIEZAS</th></tr>'
-            +'<tr><th style="'+cellLabel+'"></th>'
-              +cols.map(function(c){return '<th style="'+cellHeader+'">'+v(c.talla)+'</th>';}).join('')
-            +'</tr>'
-          +'</thead>'
-          +'<tbody>'
-            +'<tr><td style="'+cellLabel+'">FRENTES</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.total)+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellLabel+'">ESPALDAS</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.total)+'</td>';}).join('')+'</tr>'
-            +'<tr><td style="'+cellLabel+'">MANGAS</td>'
-              +cols.map(function(c){
-                var m = (c.total!==''&&c.total!==undefined&&Number(c.total)>0) ? Number(c.total)*2 : '';
-                return '<td style="'+cellBase+'">'+m+'</td>';
-              }).join('')+'</tr>'
-            // CUELLOS — solo primer aparición de cada talla tiene valor
-            +'<tr><td style="'+cellLabel+'">CUELLOS</td>'
-              +cols.map(function(c){return '<td style="'+cellBase+'">'+v(c.cuello)+'</td>';}).join('')+'</tr>'
-            // Filas de valor único
-            +'<tr><td style="'+cellLabel+'">TAPA COSTURA (M)</td>'
-              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.tapaCostura||0)+'</td></tr>'
-            +'<tr><td style="'+cellLabel+'">MUESTRA</td>'
-              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.muestra==='SI'?'SI':'NO')+'</td></tr>'
-            +'<tr><td style="'+cellLabel+'">MOLDES</td>'
-              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.moldes==='SI'?'SI':'NO')+'</td></tr>'
-            +'<tr><td style="'+cellLabel+'">HILO (KG.)</td>'
-              +'<td colspan="'+cols.length+'" style="'+B+'padding:6px 10px;font-weight:700">'+(salida.hilo||0)+'</td></tr>'
-          +'</tbody>'
-        +'</table>'
-
-        // ── FIRMAS ──
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:36px">'
-          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:700">ENTREGA:</div></div>'
-          +'<div style="text-align:center"><div style="border-top:1.5px solid #000;padding-top:6px;font-size:13px;font-weight:700">RECIBE:</div></div>'
-        +'</div>'
-      +'</div>';
-  });
-}
-
-function printFormato(){
-  var content = document.getElementById('printArea');
-  if(!content){toast('No hay formato para imprimir','danger');return;}
-  var w = window.open('','','width=1000,height=800');
-  var html = '<!DOCTYPE html><html><head><title>Control Salidas - Tejilook</title>'
-    +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:12px;background:#fff;color:#000}'
-    +'table{border-collapse:collapse}td,th{border:1.5px solid #000}'
-    +'@media print{body{padding:4px}@page{margin:6mm;size:landscape}}</style>'
-    +'</head><body>'+content.innerHTML+'</body></html>';
-  w.document.write(html);
-  w.document.close();
-  setTimeout(function(){w.print();},700);
-}
-
+ 
 
 function renderUsuarios(){
   if(currentUser && currentUser.rol !== 'Superusuario'){
