@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>TejiLook Sistema de Control de Producción</title>
+  <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1sG2xbWoHYfkrpzoKwUTFaIdjMz9LTvAA">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Segoe UI',sans-serif;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#f0f4f8;
+    }
+    .card{
+      background:#fff;
+      border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.12);
+      padding:40px 32px;
+      text-align:center;
+      max-width:420px;
+      width:90%;
+    }
+    .logo{
+      width:72px;height:72px;
+      border-radius:16px;
+      margin:0 auto 20px;
+      overflow:hidden;
+    }
+    .logo img{width:100%;height:100%;object-fit:contain}
+    h1{
+      font-size:22px;font-weight:700;
+      color:#0f172a;margin-bottom:6px;
+    }
+    .sub{font-size:14px;color:#64748b;margin-bottom:28px}
+    .img-wrap{
+      border-radius:14px;
+      overflow:hidden;
+      margin-bottom:24px;
+      border:1px solid #e2e8f0;
+    }
+    .img-wrap img{width:100%;display:block}
+    .msg{
+      background:#f0f9ff;
+      border:1px solid #bae6fd;
+      border-radius:10px;
+      padding:14px 16px;
+      font-size:13px;
+      color:#0369a1;
+      line-height:1.6;
+    }
+    .dots{display:inline-block;animation:dots 1.4s infinite}
+    @keyframes dots{
+      0%,20%{content:''}
+      40%{content:'.'}
+      60%{content:'..'}
+      80%,100%{content:'...'}
+    }
+    .dots::after{content:'';animation:dots 1.4s infinite}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <img src="https://lh3.googleusercontent.com/d/1sG2xbWoHYfkrpzoKwUTFaIdjMz9LTvAA" alt="TejiLook">
+    </div>
+    <h1>TejiLook</h1>
+    <p class="sub">Sistema de Control de Producción</p>
+    <div class="img-wrap">
+      <img src="https://lh3.googleusercontent.com/d/1RE-0iL06IVEWjdJkViXxpZc30wJ--SR-" alt="En construcción">
+    </div>
+    <div class="msg">
+      🚧 El sistema se encuentra en <strong>mantenimiento y mejoras</strong>.<br>
+      Estará disponible muy pronto<span class="dots"></span>
+    </div>
+  </div>
+</body>
+</html>
