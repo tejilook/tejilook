@@ -1,15 +1,16 @@
 /**
- * TEJILOOK ERP - VERSIÓN CORREGIDA (CONEXIÓN TOTAL)
- * Esta versión coincide exactamente con los nombres de tus botones en el HTML.
+ * TEJILOOK ERP - CONEXIÓN TOTAL
+ * Este código está sincronizado con los nombres de tu index.html.
  */
 
+// --- 1. CONFIGURACIÓN DEL SISTEMA ---
 const App = {
   user: JSON.parse(localStorage.getItem('tejilook_user')) || null,
   
-  // MOTOR DE COMUNICACIÓN (Wrapper seguro)
+  // El "Mesero" que va a la cocina (Router.gs)
   call: function(fn, ...args) {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) overlay.style.display = 'flex'; // Muestra el cargando
     
     return new Promise((resolve) => {
       google.script.run
@@ -19,17 +20,20 @@ const App = {
         })
         .withFailureHandler(err => {
           if (overlay) overlay.style.display = 'none';
-          alert("Error en el servidor: " + err.message);
+          alert("Error: " + err.message);
         })[fn](...args);
     });
   }
 };
 
-// --- 1. ARRANQUE (Coincide con tu window.onload) ---
+// --- 2. ARRANQUE (Al abrir la página) ---
 window.onload = () => {
+  const loginPage = document.getElementById('loginPage');
+  const mainPage = document.getElementById('mainPage');
+
   if (!App.user) {
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('mainPage').style.display = 'none';
+    if (loginPage) loginPage.style.display = 'flex';
+    if (mainPage) mainPage.style.display = 'none';
   } else {
     initApp();
   }
@@ -40,66 +44,62 @@ function initApp() {
   document.getElementById('mainPage').style.display = 'block';
   document.getElementById('userNameDisplay').innerText = App.user.nombre;
   
-  // Aplicar seguridad de administrador/supervisor
+  // Ocultar botones de administrador si es Supervisor
   const esAdmin = App.user.rol === 'Superusuario' || App.user.rol === 'Administrador';
   document.querySelectorAll('.admin-only').forEach(el => el.style.display = esAdmin ? 'block' : 'none');
   
-  // Abrir sección inicial según el rol
+  // Abrir la sección inicial
   showSection(App.user.rol === 'Supervisor' ? 'calidad' : 'dashboard');
 }
 
-// --- 2. NAVEGACIÓN (Este es el nombre que usan tus botones del menú) ---
+// --- 3. NAVEGACIÓN (La función que llaman tus botones del menú) ---
 function showSection(sectionId) {
-  // 1. Escondemos todas las secciones (usando el ID 'section-' que tienes en el HTML)
+  // 1. Escondemos todas las secciones (ID: section-nombre)
   document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
   
-  // 2. Mostramos la sección elegida
+  // 2. Mostramos la elegida
   const target = document.getElementById('section-' + sectionId);
   if (target) {
     target.style.display = 'block';
-  } else {
-    console.error("No se encontró la sección: section-" + sectionId);
   }
 
   // 3. Cargamos los datos automáticamente para esa pestaña
   if (sectionId === 'dashboard') loadDashboard();
-  if (sectionId === 'clientes') loadClientes();
-  if (sectionId === 'trabajadores') loadTrabajadores();
-  if (sectionId === 'modelos') loadModelos();
-  if (sectionId === 'produccion') loadProduccion();
+  if (sectionId === 'clientes') loadModulo('CLIENTES', 'listaClientes', ['Cliente', 'LogoCliente']);
+  if (sectionId === 'trabajadores') loadModulo('TRABAJADORES', 'listaTrabajadores', ['NombreTrabajador', 'Puesto']);
+  if (sectionId === 'modelos') loadModulo('MODELOS', 'tablaModelos', ['NoOrden', 'Modelo', 'NombreCliente']);
 }
 
-// --- 3. CARGA DE DATOS (Dashboard y Tablas) ---
-async function loadDashboard() {
-  // Llama a la cocina para traer los números
-  const stats = await App.call('getDashboardStats', 'mes', 2026, 3);
-  // Aquí puedes poner las funciones que dibujan tus gráficas
-  console.log("Estadísticas cargadas:", stats);
+// --- 4. GENERADOR UNIVERSAL (Carga cualquier tabla automáticamente) ---
+async function loadModulo(tabla, contenedorId, columnas) {
+  const lista = await App.call('get' + tabla.charAt(0) + tabla.slice(1).toLowerCase());
+  const contenedor = document.getElementById(contenedorId);
+  if (!contenedor) return;
+
+  // Dibuja la tabla con los datos de tu Excel
+  let html = `<table class="table"><thead><tr>${columnas.map(c => `<th>${c}</th>`).join('')}<th>Acción</th></tr></thead><tbody>`;
+  html += lista.map(item => `
+    <tr>
+      ${columnas.map(c => `<td>${item[c] || ''}</td>`).join('')}
+      <td><button class="btn-edit" onclick="alert('Próximamente: Editar ${tabla}')">📝</button></td>
+    </tr>`).join('');
+  html += `</tbody></table>`;
+  contenedor.innerHTML = html;
 }
 
-async function loadClientes() {
-  const lista = await App.call('getClientesActivos');
-  const contenedor = document.getElementById('listaClientes'); // ID que usas en el HTML
-  if (contenedor) {
-    contenedor.innerHTML = lista.map(c => `
-      <div class="card-item">
-        <img src="${c.LogoCliente || ''}" width="40">
-        <span>${c.Cliente}</span>
-        <button onclick="editCliente('${c.ID_Cliente}')">Editar</button>
-      </div>`).join('');
-  }
-}
-
-// --- 4. LÓGICA DE PIEZAS (Tu regla de oro) ---
+// --- 5. LÓGICA DE PRODUCCIÓN (Tu regla de oro) ---
 function updateProductionCalculo() {
-  const cant = parseInt(document.getElementById('input-cantidad').value) || 0;
+  const cantInput = document.getElementById('input-cantidad'); // ID de tu HTML
+  if (!cantInput) return;
+  
+  const cant = parseInt(cantInput.value) || 0;
   // Regla: 1 suéter = 1 Frente + 1 Espalda + 2 Mangas
   document.getElementById('input-frentes').value = cant;
   document.getElementById('input-espaldas').value = cant;
   document.getElementById('input-mangas').value = cant * 2;
 }
 
-// --- 5. LOGIN Y LOGOUT (Los nombres que usa tu index.html) ---
+// --- 6. LOGIN Y SALIDA ---
 async function doLogin() {
   const u = document.getElementById('login_user').value;
   const p = document.getElementById('login_pass').value;
