@@ -55,25 +55,48 @@ function navigate(sectionId) {
   ejecutarCargador(sectionId, target);
 }
 
-// --- 2. CARGADORES DE DATOS ---
+// --- 2. CARGADORES DE DATOS (ACTUALIZADO CON TODOS LOS MÓDULOS) ---
 async function ejecutarCargador(id, contenedor) {
+  // Limpiar mensaje anterior
+  contenedor.innerHTML = `<p style="padding:20px;">⌛ Cargando información de ${id}...</p>`;
+
   if (id === 'dashboard') {
-    contenedor.innerHTML = "<h3>Bienvenido al Panel de Control</h3><p>Los datos están listos en la consola.</p>";
+    contenedor.innerHTML = "<h3>Panel de Control</h3><p>Resumen general de la fábrica.</p>";
   }
   
-  if (id === 'entradas') {
+  if (id === 'entradas' || id === 'ver-entradas') {
     const datos = await App.call('getEntradas');
-    dibujarTabla(contenedor, "ENTRADAS RECIENTES", datos, ['FechaEntrada', 'NoOrden', 'Cuellos']);
+    dibujarTabla(contenedor, "ENTRADAS DE MATERIAL", datos, ['FechaEntrada', 'NoOrden', 'Cuellos', 'Hilo']);
   }
 
-  if (id === 'produccion') {
+  if (id === 'produccion' || id === 'ver-produccion') {
     const datos = await App.call('getProduccion');
-    dibujarTabla(contenedor, "CONTROL DE PRODUCCIÓN", datos, ['Fecha', 'NombreTrabajador', 'Proceso', 'NoOrden']);
+    dibujarTabla(contenedor, "HISTORIAL DE PRODUCCIÓN", datos, ['Fecha', 'NombreTrabajador', 'Proceso', 'NoOrden']);
+  }
+  
+  if (id === 'embolsado') {
+    const datos = await App.call('getEmbolsado');
+    dibujarTabla(contenedor, "PRODUCTO EMBOLSADO", datos, ['Fecha', 'NoOrden', 'Total']);
+  }
+
+  if (id === 'salidas' || id === 'ver-salidas') {
+    const datos = await App.call('getSalidas');
+    dibujarTabla(contenedor, "NOTAS DE SALIDA", datos, ['FechaSalida', 'NoOrden', 'NombreCliente', 'TotalSueteres']);
+  }
+
+  if (id === 'reposiciones') {
+    const datos = await App.call('getReposiciones');
+    dibujarTabla(contenedor, "CALIDAD Y REPOSICIONES", datos, ['Fecha', 'NoOrden', 'Estatus', 'Tipo']);
+  }
+
+  if (id === 'usuarios') {
+    const datos = await App.call('getUsuarios');
+    dibujarTabla(contenedor, "USUARIOS DEL SISTEMA", datos, ['Nombre', 'Usuario', 'Rol', 'Activo']);
   }
   
   if (id === 'bitacora') {
     const datos = await App.call('getBitacora');
-    dibujarTabla(contenedor, "HISTORIAL DE MOVIMIENTOS", datos, ['Fecha', 'Usuario', 'Accion', 'Detalle']);
+    dibujarTabla(contenedor, "BITÁCORA DE MOVIMIENTOS", datos, ['Fecha', 'Usuario', 'Accion', 'Detalle']);
   }
 }
 
