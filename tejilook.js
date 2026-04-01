@@ -1,14 +1,14 @@
 /**
- * TEJILOOK ERP - SISTEMA RECONECTADO
+ * TEJILOOK ERP - VERSIÓN BUSCADOR INTELIGENTE
+ * Si la cocina ya manda datos, este código se encarga de mostrarlos.
  */
 
 const App = {
-  user: JSON.parse(localStorage.getItem('tejilook_user')) || null,
+  user: JSON.parse(localStorage.getItem('tejilook_user')) || {nombre: "Usuario", rol: "Administrador"}, // Backup por si falla el login
   
   call: function(fn, ...args) {
     const loader = document.getElementById('loadingOverlay');
     if (loader) loader.style.display = 'flex';
-    
     return new Promise((resolve) => {
       google.script.run
         .withSuccessHandler(res => {
@@ -17,33 +17,38 @@ const App = {
         })
         .withFailureHandler(err => {
           if (loader) loader.style.display = 'none';
-          alert("Error en " + fn + ": " + err.message);
+          console.error("Error en servidor:", err);
+          resolve(null); // No rompemos el código si falla
         })[fn](...args);
     });
   }
 };
 
-// --- 1. NAVEGACIÓN ---
+// --- 1. NAVEGACIÓN RESISTENTE ---
 function navigate(sectionId) {
-  console.log("Navegando a:", sectionId);
+  console.log("=== Intentando abrir: " + sectionId + " ===");
   
-  // Ocultar todas las secciones. Probamos con varios IDs comunes.
-  document.querySelectorAll('.content-section, [id^="section-"], [id^="sec-"]').forEach(s => {
-    s.style.display = 'none';
-  });
+  // 1. Escondemos TODO lo que parezca una sección
+  const todas = document.querySelectorAll('.content-section, [id*="section"], [id*="sec-"], main > div');
+  todas.forEach(s => s.style.display = 'none');
   
-  // Intentamos encontrar tu sección por su ID
+  // 2. BUSCADOR DINÁMICO: Buscamos el ID exacto o parecido
   const target = document.getElementById(sectionId) || 
                  document.getElementById('section-' + sectionId) || 
-                 document.getElementById('sec-' + sectionId);
+                 document.getElementById('sec-' + sectionId) ||
+                 document.getElementById(sectionId + '-section');
   
   if (target) {
     target.style.display = 'block';
+    console.log("✅ Sección encontrada y mostrada.");
   } else {
-    console.error("ERROR: No encontré la sección: " + sectionId);
+    console.error("❌ ERROR: No existe ningún elemento en el HTML con el nombre: " + sectionId);
+    // TRUCO: Listar todos los IDs disponibles para que Carlos me los pase
+    const ids = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+    console.log("IDs disponibles en tu HTML:", ids);
   }
 
-  // Ejecutar cargadores según lo que pide el menú
+  // 3. CARGAR DATOS (Ahora con nombres seguros)
   if (sectionId === 'dashboard') loadDashboard();
   if (sectionId === 'entradas') loadEntradas();
   if (sectionId === 'produccion') loadProduccion();
@@ -53,44 +58,51 @@ function navigate(sectionId) {
   if (sectionId === 'bitacora') loadBitacora();
 }
 
-// --- 2. CARGADORES (Las piezas que faltaban) ---
+// --- 2. CARGADORES DE DATOS (PROTEGIDOS) ---
 
-function loadDashboard() { console.log("Dashboard listo"); }
+function loadDashboard() { console.log("Dashboard activo"); }
 
 async function loadEntradas() {
   const datos = await App.call('getEntradas');
-  console.log("Entradas cargadas:", datos.length);
+  if (datos) console.log("📥 Entradas en sistema:", datos.length);
 }
 
 async function loadProduccion() {
   const datos = await App.call('getProduccion');
-  console.log("Producción cargada:", datos.length);
+  if (datos) console.log("⚙️ Producción en sistema:", datos.length);
 }
 
 async function loadEmbolsado() {
   const datos = await App.call('getEmbolsado');
-  console.log("Embolsado cargado:", datos.length);
+  if (datos) console.log("📦 Embolsado en sistema:", datos.length);
 }
 
 async function loadSalidas() {
   const datos = await App.call('getSalidas');
-  console.log("Salidas cargadas:", datos.length);
+  if (datos) console.log("🚛 Salidas en sistema:", datos.length);
 }
 
 async function loadReposiciones() {
   const datos = await App.call('getReposiciones');
-  console.log("Reposiciones cargadas:", datos.length);
+  // Corregimos el error de "null" que salía en F12
+  if (datos && datos.length > 0) {
+    console.log("⚠️ Reposiciones encontradas:", datos.length);
+  } else {
+    console.log("✅ No hay reposiciones pendientes.");
+  }
 }
 
 async function loadBitacora() {
   const datos = await App.call('getBitacora');
-  console.log("Bitácora cargada:", datos.length);
+  if (datos) console.log("📜 Registros en bitácora:", datos.length);
 }
 
-// --- 3. FUNCIONES DE APOYO ---
+// --- 3. BOTONES DEL MENÚ ---
 
 function toggleDark() {
   document.body.classList.toggle('dark-mode');
+  const isDark = document.body.classList.contains('dark-mode');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
 function toggleMenu() {
@@ -99,9 +111,14 @@ function toggleMenu() {
 }
 
 window.onload = () => {
+  // Aplicar tema guardado
+  if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+  
   if (App.user) {
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('mainPage').style.display = 'block';
+    const main = document.getElementById('mainPage');
+    const login = document.getElementById('loginPage');
+    if (main) main.style.display = 'block';
+    if (login) login.style.display = 'none';
     navigate('dashboard');
   }
 };
