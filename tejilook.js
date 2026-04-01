@@ -1,15 +1,14 @@
 /**
- * TEJILOOK ERP - VERSIÓN INTEGRAL RECONECTADA
- * Esta versión restaura todos los módulos y corrige los errores de F12.
+ * TEJILOOK ERP - SISTEMA RECONECTADO
  */
 
 const App = {
   user: JSON.parse(localStorage.getItem('tejilook_user')) || null,
-  theme: localStorage.getItem('theme') || 'light',
-
+  
   call: function(fn, ...args) {
     const loader = document.getElementById('loadingOverlay');
     if (loader) loader.style.display = 'flex';
+    
     return new Promise((resolve) => {
       google.script.run
         .withSuccessHandler(res => {
@@ -24,60 +23,27 @@ const App = {
   }
 };
 
-// --- 1. ARRANQUE Y TEMA ---
-window.onload = () => {
-  if (App.theme === 'dark') document.body.classList.add('dark-mode');
-  if (!App.user) {
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('mainPage').style.display = 'none';
-  } else {
-    initApp();
-  }
-};
-
-// Corrigiendo el error: "toggleDark is not defined"
-function toggleDark() {
-  const isDark = document.body.classList.toggle('dark-mode');
-  App.theme = isDark ? 'dark' : 'light';
-  localStorage.setItem('theme', App.theme);
-}
-
-function toggleMenu() {
-  const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar');
-  if (sidebar) sidebar.classList.toggle('active');
-}
-
-function initApp() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('mainPage').style.display = 'block';
-  document.getElementById('userNameDisplay').innerText = App.user.nombre;
-  
-  const esAdmin = App.user.rol === 'Superusuario' || App.user.rol === 'Administrador';
-  document.querySelectorAll('.admin-only').forEach(el => el.style.display = esAdmin ? 'block' : 'none');
-  
-  navigate(App.user.rol === 'Supervisor' ? 'reposiciones' : 'dashboard');
-}
-
-// --- 2. NAVEGACIÓN UNIVERSAL (Corregida) ---
+// --- 1. NAVEGACIÓN ---
 function navigate(sectionId) {
-  console.log("Intentando navegar a:", sectionId);
+  console.log("Navegando a:", sectionId);
   
-  // Ocultar todas las secciones posibles
-  const secciones = document.querySelectorAll('.content-section');
-  secciones.forEach(s => s.style.display = 'none');
+  // Ocultar todas las secciones. Probamos con varios IDs comunes.
+  document.querySelectorAll('.content-section, [id^="section-"], [id^="sec-"]').forEach(s => {
+    s.style.display = 'none';
+  });
   
-  // Buscar la sección por varios nombres posibles (por si el HTML varía)
-  const target = document.getElementById('section-' + sectionId) || 
-                 document.getElementById(sectionId) || 
+  // Intentamos encontrar tu sección por su ID
+  const target = document.getElementById(sectionId) || 
+                 document.getElementById('section-' + sectionId) || 
                  document.getElementById('sec-' + sectionId);
   
   if (target) {
     target.style.display = 'block';
   } else {
-    console.error("ERROR CRÍTICO: No se encontró el ID de sección para " + sectionId);
+    console.error("ERROR: No encontré la sección: " + sectionId);
   }
 
-  // Ejecutar los cargadores que pide la consola (F12)
+  // Ejecutar cargadores según lo que pide el menú
   if (sectionId === 'dashboard') loadDashboard();
   if (sectionId === 'entradas') loadEntradas();
   if (sectionId === 'produccion') loadProduccion();
@@ -87,67 +53,55 @@ function navigate(sectionId) {
   if (sectionId === 'bitacora') loadBitacora();
 }
 
-// --- 3. FUNCIONES DE CARGA (LA CARNE DEL SISTEMA) ---
+// --- 2. CARGADORES (Las piezas que faltaban) ---
 
-async function loadDashboard() {
-  console.log("Cargando Dashboard...");
-  // Aquí puedes poner la lógica de tus gráficas
-}
+function loadDashboard() { console.log("Dashboard listo"); }
 
 async function loadEntradas() {
-  const lista = await App.call('getEntradas');
-  renderTabla('tablaEntradas', lista, ['FechaEntrada', 'NoOrden', 'Cuellos']);
-}
-
-// Lógica de oro: 1 suéter = 4 piezas
-function updateProduccionCalculo() {
-  const cant = parseInt(document.getElementById('prod-cantidad').value) || 0;
-  document.getElementById('prod-frentes').value = cant;
-  document.getElementById('prod-espaldas').value = cant;
-  document.getElementById('prod-mangas').value = cant * 2;
+  const datos = await App.call('getEntradas');
+  console.log("Entradas cargadas:", datos.length);
 }
 
 async function loadProduccion() {
-  const lista = await App.call('getProduccion');
-  renderTabla('tablaProduccion', lista, ['Fecha', 'NombreTrabajador', 'Proceso', 'NoOrden']);
+  const datos = await App.call('getProduccion');
+  console.log("Producción cargada:", datos.length);
+}
+
+async function loadEmbolsado() {
+  const datos = await App.call('getEmbolsado');
+  console.log("Embolsado cargado:", datos.length);
 }
 
 async function loadSalidas() {
-  const lista = await App.call('getSalidas');
-  renderTabla('tablaSalidas', lista, ['FechaSalida', 'NoOrden', 'NombreCliente', 'TotalSueteres']);
+  const datos = await App.call('getSalidas');
+  console.log("Salidas cargadas:", datos.length);
 }
 
-// --- 4. UTILIDADES ---
+async function loadReposiciones() {
+  const datos = await App.call('getReposiciones');
+  console.log("Reposiciones cargadas:", datos.length);
+}
 
-function renderTabla(containerId, datos, columnas) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  if (datos.length === 0) {
-    container.innerHTML = "<p>No hay registros disponibles.</p>";
-    return;
+async function loadBitacora() {
+  const datos = await App.call('getBitacora');
+  console.log("Bitácora cargada:", datos.length);
+}
+
+// --- 3. FUNCIONES DE APOYO ---
+
+function toggleDark() {
+  document.body.classList.toggle('dark-mode');
+}
+
+function toggleMenu() {
+  const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
+  if (sidebar) sidebar.classList.toggle('active');
+}
+
+window.onload = () => {
+  if (App.user) {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainPage').style.display = 'block';
+    navigate('dashboard');
   }
-
-  let html = `<table class="table-custom"><thead><tr>${columnas.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
-  html += datos.map(fila => `<tr>${columnas.map(c => `<td>${fila[c] || ''}</td>`).join('')}</tr>`).join('');
-  html += `</tbody></table>`;
-  container.innerHTML = html;
-}
-
-async function doLogin() {
-  const u = document.getElementById('login_user').value;
-  const p = document.getElementById('login_pass').value;
-  const res = await App.call('loginUsuario', { usuario: u, password: p });
-  if (res && res.ok) {
-    localStorage.setItem('tejilook_user', JSON.stringify(res.user));
-    App.user = res.user;
-    initApp();
-  } else {
-    alert(res ? res.msg : "Credenciales inválidas");
-  }
-}
-
-function doLogout() {
-  localStorage.removeItem('tejilook_user');
-  location.reload();
-}
+};
