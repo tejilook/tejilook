@@ -1,14 +1,13 @@
 /**
- * TEJILOOK ERP - VERSIÓN CATÁLOGOS Y ALTAS
+ * TEJILOOK ERP - CONEXIÓN POR IDs (RECONEXIÓN TOTAL)
  */
 
 const App = {
-  user: JSON.parse(localStorage.getItem('tejilook_user')) || {nombre: "Carlos", rol: "Administrador"},
+  user: JSON.parse(localStorage.getItem('tejilook_user')) || null,
   
   call: function(fn, ...args) {
-    const loader = document.getElementById('loginLoading') || document.getElementById('loadingOverlay');
+    const loader = document.getElementById('loginOverlay'); // ID 0 de tu lista
     if (loader) loader.style.display = 'flex';
-    
     return new Promise((resolve) => {
       google.script.run
         .withSuccessHandler(res => {
@@ -17,109 +16,94 @@ const App = {
         })
         .withFailureHandler(err => {
           if (loader) loader.style.display = 'none';
-          console.error("Error en " + fn, err);
-          resolve([]);
+          alert("Error: " + err.message);
         })[fn](...args);
     });
   }
 };
 
-// --- 1. NAVEGACIÓN ---
-function navigate(sectionId) {
-  const mainContainer = document.getElementById('main');
-  if (!mainContainer) return;
+// --- 1. FUNCIONES QUE TUS BOTONES PIDEN (Basado en F12) ---
 
-  Array.from(mainContainer.children).forEach(child => child.style.display = 'none');
-
-  let target = document.getElementById('sec-' + sectionId);
-  if (!target) {
-    target = document.createElement('div');
-    target.id = 'sec-' + sectionId;
-    target.className = 'content-section';
-    mainContainer.appendChild(target);
-  }
-  
-  target.style.display = 'block';
-  ejecutarCargador(sectionId, target);
+function toggleMenu() {
+  const sidebar = document.getElementById('sidebar'); // ID 9 de tu lista
+  if (sidebar) sidebar.classList.toggle('active');
 }
 
-// --- 2. CARGADORES (Clientes, Maquilas, Trabajadores, Modelos) ---
-async function ejecutarCargador(id, contenedor) {
-  contenedor.innerHTML = `<p style="padding:20px;">⌛ Cargando ${id}...</p>`;
+function toggleDark() {
+  document.body.classList.toggle('dark-mode');
+}
 
-  // MAPEO DE CATÁLOGOS
-  const catalogos = {
-    'clientes': { fn: 'getClientes', tit: 'CATÁLOGO DE CLIENTES', col: ['Cliente', 'Activo'], modal: 'modalCliente' },
-    'maquilas': { fn: 'getMaquilas', tit: 'LISTA DE MAQUILAS', col: ['Maquila', 'Destino', 'Activo'], modal: 'modalMaquila' },
-    'trabajadores': { fn: 'getTrabajadores', tit: 'NUESTRO PERSONAL', col: ['NombreTrabajador', 'Puesto', 'Activo'], modal: 'modalTrabajador' },
-    'modelos': { fn: 'getModelos', tit: 'CATÁLOGO DE MODELOS', col: ['NoOrden', 'Modelo', 'NombreCliente'], modal: 'modalModelo' },
-    'usuarios': { fn: 'getUsuarios', tit: 'USUARIOS DEL SISTEMA', col: ['Nombre', 'Usuario', 'Rol'], modal: 'modalUsuario' }
+// Para que funcione tu menú de navegación
+function navigate(seccion) {
+  const main = document.getElementById('main'); // ID 18 de tu lista
+  if (!main) return;
+
+  // Limpiar el contenido actual del main para poner la tabla
+  main.innerHTML = `<div style="padding:20px;">⌛ Cargando ${seccion}...</div>`;
+  
+  ejecutarCarga(seccion, main);
+}
+
+// --- 2. CARGADORES DE DATOS ---
+
+async function ejecutarCarga(id, contenedor) {
+  // Mapeo de qué función llamar según el botón
+  const funciones = {
+    'clientes': 'getClientes',
+    'maquilas': 'getMaquilas',
+    'trabajadores': 'getTrabajadores',
+    'modelos': 'getModelos',
+    'entradas': 'getEntradas',
+    'produccion': 'getProduccion',
+    'salidas': 'getSalidas',
+    'bitacora': 'getBitacora'
   };
 
-  if (catalogos[id]) {
-    const c = catalogos[id];
-    const datos = await App.call(c.fn);
-    dibujarTablaCatalogo(contenedor, c.tit, datos, c.col, c.modal);
+  if (funciones[id]) {
+    const datos = await App.call(funciones[id]);
+    dibujarTabla(contenedor, id.toUpperCase(), datos);
   } else {
-    // Otros módulos (Producción, Entradas, etc.)
-    if (id === 'dashboard') contenedor.innerHTML = "<h3>Panel de Control</h3>";
-    if (id === 'entradas') {
-      const datos = await App.call('getEntradas');
-      dibujarTablaSimple(contenedor, "ENTRADAS", datos, ['FechaEntrada', 'NoOrden', 'Cuellos']);
-    }
-    if (id === 'produccion') {
-      const datos = await App.call('getProduccion');
-      dibujarTablaSimple(contenedor, "PRODUCCIÓN", datos, ['Fecha', 'NombreTrabajador', 'Proceso', 'NoOrden']);
-    }
+    contenedor.innerHTML = `<h3>Sección: ${id}</h3><p>Contenido en desarrollo...</p>`;
   }
 }
 
-// --- 3. DIBUJAR TABLAS CON BOTÓN DE ALTA ---
-function dibujarTablaCatalogo(contenedor, titulo, datos, columnas, modalId) {
-  let html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px;">
-      <h3 style="margin:0;">${titulo}</h3>
-      <button onclick="abrirAlta('${modalId}')" style="background:#28a745; color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">
-        + Agregar Nuevo
-      </button>
-    </div>`;
-  
-  html += `<table style="width:100%; border-collapse: collapse;">
-    <thead style="background:#f4f4f4;"><tr>${columnas.map(c => `<th style="padding:10px; border-bottom:2px solid #ddd;">${c}</th>`).join('')}<th>Acción</th></tr></thead>
+function dibujarTabla(contenedor, titulo, datos) {
+  if (!datos || datos.length === 0) {
+    contenedor.innerHTML = `<h3>${titulo}</h3><p>No hay datos registrados.</p>`;
+    return;
+  }
+
+  const columnas = Object.keys(datos[0]);
+  let html = `<div style="padding:15px;"><h3>${titulo}</h3>`;
+  html += `<table border="1" style="width:100%; border-collapse:collapse; background:white; color:black;">
+    <thead style="background:#eee;"><tr>${columnas.map(c => `<th>${c}</th>`).join('')}</tr></thead>
     <tbody>`;
   
-  html += datos.map(fila => `
-    <tr>${columnas.map(c => `<td style="padding:10px; border-bottom:1px solid #ddd;">${fila[c] || ''}</td>`).join('')}
-    <td style="padding:10px; border-bottom:1px solid #ddd;"><button onclick="alert('Editar próximamente')">📝</button></td></tr>
-  `).join('');
+  html += datos.map(f => `<tr>${columnas.map(c => `<td>${f[c] || ''}</td>`).join('')}</tr>`).join('');
+  html += `</tbody></table></div>`;
   
-  html += `</tbody></table>`;
   contenedor.innerHTML = html;
 }
 
-function dibujarTablaSimple(contenedor, titulo, datos, columnas) {
-  let html = `<h3>${titulo}</h3><table style="width:100%; border-collapse:collapse;">
-    <thead><tr>${columnas.map(c => `<th>${c}</th>`).join('')}</tr></thead>
-    <tbody>${datos.map(f => `<tr>${columnas.map(c => `<td>${f[c] || ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  contenedor.innerHTML = html;
-}
+// --- 3. MENÚ DE ALTAS (MODALES) ---
 
-// --- 4. FUNCIONES PARA MODALES (ALTAS) ---
-
-function abrirAlta(modalId) {
-  console.log("Intentando abrir modal:", modalId);
-  const modal = document.getElementById(modalId);
+// Esta función es para que tus botones de "Alta" abran las ventanas
+function abrirModal(idModal) {
+  const modal = document.getElementById(idModal);
   if (modal) {
-    modal.style.display = 'flex'; // Tus modales usan flex o block
+    modal.style.display = 'flex';
   } else {
-    alert("No se encontró el formulario para esta alta: " + modalId);
+    alert("No se encontró el modal: " + idModal);
   }
 }
 
-// Función para cerrar modales (asumiendo que tus modales tienen una X o fondo para cerrar)
-function closeModal(id) {
-  const m = document.getElementById(id);
-  if (m) m.style.display = 'none';
-}
-
-function toggleDark() { document.body.classList.toggle('dark-mode'); }
+// --- 4. ARRANQUE ---
+window.onload = () => {
+  if (App.user) {
+    const login = document.getElementById('loginOverlay');
+    if (login) login.style.display = 'none';
+    const mainPage = document.getElementById('main');
+    if (mainPage) mainPage.style.display = 'block';
+    navigate('dashboard');
+  }
+};
