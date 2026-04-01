@@ -1,14 +1,15 @@
 /**
- * TEJILOOK ERP - VERSIÓN BUSCADOR INTELIGENTE
- * Si la cocina ya manda datos, este código se encarga de mostrarlos.
+ * TEJILOOK ERP - VERSIÓN CONSTRUCTORA
+ * Si no encuentra la sección en el HTML, la crea automáticamente.
  */
 
 const App = {
-  user: JSON.parse(localStorage.getItem('tejilook_user')) || {nombre: "Usuario", rol: "Administrador"}, // Backup por si falla el login
+  user: JSON.parse(localStorage.getItem('tejilook_user')) || {nombre: "Carlos", rol: "Administrador"},
   
   call: function(fn, ...args) {
-    const loader = document.getElementById('loadingOverlay');
+    const loader = document.getElementById('loginLoading') || document.getElementById('loadingOverlay');
     if (loader) loader.style.display = 'flex';
+    
     return new Promise((resolve) => {
       google.script.run
         .withSuccessHandler(res => {
@@ -17,87 +18,86 @@ const App = {
         })
         .withFailureHandler(err => {
           if (loader) loader.style.display = 'none';
-          console.error("Error en servidor:", err);
-          resolve(null); // No rompemos el código si falla
+          console.error("Error en cocina:", err);
+          resolve(null);
         })[fn](...args);
     });
   }
 };
 
-// --- 1. NAVEGACIÓN RESISTENTE ---
+// --- 1. NAVEGACIÓN INTELIGENTE ---
 function navigate(sectionId) {
-  console.log("=== Intentando abrir: " + sectionId + " ===");
+  console.log("=== Abriendo sección: " + sectionId + " ===");
   
-  // 1. Escondemos TODO lo que parezca una sección
-  const todas = document.querySelectorAll('.content-section, [id*="section"], [id*="sec-"], main > div');
-  todas.forEach(s => s.style.display = 'none');
+  const mainContainer = document.getElementById('main'); // ID 18 de tu lista
+  if (!mainContainer) return alert("No se encontró el contenedor principal 'main'");
+
+  // 1. Ocultar todo lo que esté dentro de main
+  Array.from(mainContainer.children).forEach(child => child.style.display = 'none');
+
+  // 2. ¿Existe la sección? Si no, la creamos
+  let target = document.getElementById('sec-' + sectionId);
+  if (!target) {
+    console.log("🛠️ Creando mesa para: " + sectionId);
+    target = document.createElement('div');
+    target.id = 'sec-' + sectionId;
+    target.className = 'content-section';
+    mainContainer.appendChild(target);
+  }
   
-  // 2. BUSCADOR DINÁMICO: Buscamos el ID exacto o parecido
-  const target = document.getElementById(sectionId) || 
-                 document.getElementById('section-' + sectionId) || 
-                 document.getElementById('sec-' + sectionId) ||
-                 document.getElementById(sectionId + '-section');
+  target.style.display = 'block';
   
-  if (target) {
-    target.style.display = 'block';
-    console.log("✅ Sección encontrada y mostrada.");
-  } else {
-    console.error("❌ ERROR: No existe ningún elemento en el HTML con el nombre: " + sectionId);
-    // TRUCO: Listar todos los IDs disponibles para que Carlos me los pase
-    const ids = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-    console.log("IDs disponibles en tu HTML:", ids);
+  // Actualizar el título de la página (ID 14 de tu lista)
+  const title = document.getElementById('pageTitle');
+  if (title) title.innerText = sectionId.toUpperCase();
+
+  // 3. Mandar llamar a los datos
+  ejecutarCargador(sectionId, target);
+}
+
+// --- 2. CARGADORES DE DATOS ---
+async function ejecutarCargador(id, contenedor) {
+  if (id === 'dashboard') {
+    contenedor.innerHTML = "<h3>Bienvenido al Panel de Control</h3><p>Los datos están listos en la consola.</p>";
+  }
+  
+  if (id === 'entradas') {
+    const datos = await App.call('getEntradas');
+    dibujarTabla(contenedor, "ENTRADAS RECIENTES", datos, ['FechaEntrada', 'NoOrden', 'Cuellos']);
   }
 
-  // 3. CARGAR DATOS (Ahora con nombres seguros)
-  if (sectionId === 'dashboard') loadDashboard();
-  if (sectionId === 'entradas') loadEntradas();
-  if (sectionId === 'produccion') loadProduccion();
-  if (sectionId === 'embolsado') loadEmbolsado();
-  if (sectionId === 'salidas') loadSalidas();
-  if (sectionId === 'reposiciones') loadReposiciones();
-  if (sectionId === 'bitacora') loadBitacora();
-}
-
-// --- 2. CARGADORES DE DATOS (PROTEGIDOS) ---
-
-function loadDashboard() { console.log("Dashboard activo"); }
-
-async function loadEntradas() {
-  const datos = await App.call('getEntradas');
-  if (datos) console.log("📥 Entradas en sistema:", datos.length);
-}
-
-async function loadProduccion() {
-  const datos = await App.call('getProduccion');
-  if (datos) console.log("⚙️ Producción en sistema:", datos.length);
-}
-
-async function loadEmbolsado() {
-  const datos = await App.call('getEmbolsado');
-  if (datos) console.log("📦 Embolsado en sistema:", datos.length);
-}
-
-async function loadSalidas() {
-  const datos = await App.call('getSalidas');
-  if (datos) console.log("🚛 Salidas en sistema:", datos.length);
-}
-
-async function loadReposiciones() {
-  const datos = await App.call('getReposiciones');
-  // Corregimos el error de "null" que salía en F12
-  if (datos && datos.length > 0) {
-    console.log("⚠️ Reposiciones encontradas:", datos.length);
-  } else {
-    console.log("✅ No hay reposiciones pendientes.");
+  if (id === 'produccion') {
+    const datos = await App.call('getProduccion');
+    dibujarTabla(contenedor, "CONTROL DE PRODUCCIÓN", datos, ['Fecha', 'NombreTrabajador', 'Proceso', 'NoOrden']);
+  }
+  
+  if (id === 'bitacora') {
+    const datos = await App.call('getBitacora');
+    dibujarTabla(contenedor, "HISTORIAL DE MOVIMIENTOS", datos, ['Fecha', 'Usuario', 'Accion', 'Detalle']);
   }
 }
 
-async function loadBitacora() {
-  const datos = await App.call('getBitacora');
-  if (datos) console.log("📜 Registros en bitácora:", datos.length);
+// --- 3. DIBUJAR TABLAS PROFESIONALES ---
+function dibujarTabla(contenedor, titulo, datos, columnas) {
+  if (!datos || datos.length === 0) {
+    contenedor.innerHTML = `<h4>${titulo}</h4><p>No hay datos en el Excel.</p>`;
+    return;
+  }
+
+  let html = `<h4>${titulo} (${datos.length} registros)</h4>`;
+  html += `<table style="width:100%; border-collapse: collapse; margin-top:10px;">
+    <thead style="background:#444; color:white;"><tr>${columnas.map(c => `<th style="padding:10px; border:1px solid #ddd;">${c}</th>`).join('')}</tr></thead>
+    <tbody>`;
+  
+  html += datos.map(fila => `
+    <tr>${columnas.map(c => `<td style="padding:8px; border:1px solid #ddd;">${fila[c] || ''}</td>`).join('')}</tr>
+  `).join('');
+  
+  html += `</tbody></table>`;
+  contenedor.innerHTML = html;
 }
 
-// --- 3. BOTONES DEL MENÚ ---
+// --- 4. FUNCIONES DE INTERFAZ ---
 
 function toggleDark() {
   document.body.classList.toggle('dark-mode');
@@ -106,19 +106,16 @@ function toggleDark() {
 }
 
 function toggleMenu() {
-  const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
+  const sidebar = document.getElementById('sidebar'); // ID 9 de tu lista
   if (sidebar) sidebar.classList.toggle('active');
 }
 
 window.onload = () => {
-  // Aplicar tema guardado
   if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
   
   if (App.user) {
-    const main = document.getElementById('mainPage');
-    const login = document.getElementById('loginPage');
+    const main = document.getElementById('mainPage') || document.getElementById('main');
     if (main) main.style.display = 'block';
-    if (login) login.style.display = 'none';
     navigate('dashboard');
   }
 };
